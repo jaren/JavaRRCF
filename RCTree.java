@@ -1,6 +1,8 @@
-package rrcf;
+//package rrcf;
 
 import java.util.Map;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.function.Consumer;
 
@@ -30,6 +32,7 @@ public class RCTree {
 
     public RCTree() {
         random = new Random();
+        leavesMap = new HashMap<>();
     }
 
     @Override
@@ -51,8 +54,8 @@ public class RCTree {
             depthAndTreeString[1] += String.format("(%s)\n", ((Leaf) node).index);
         } else if (node instanceof Branch) {
             depthAndTreeString[1] += String.format("%c+\n", 9472);
-            depthAndTreeString[1] += String.format("%c %c%c%c", depthAndTreeString[0], 9500, 9472, 9472);
-            ppush.accept((char) 9472);
+            depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9500, 9472, 9472);
+            ppush.accept((char) 9474);
             printNodeToString(((Branch) node).left, depthAndTreeString);
             ppop.run();
             depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9492, 9472, 9472);
@@ -402,7 +405,7 @@ public class RCTree {
         for (int i = 0; i < ndim; i++) {
             newBox[0][i] = Math.min(bbox[0][i], point[i]);
             newBox[newBox.length - 1][i] = Math.max(bbox[bbox.length - 1][i], point[i]);
-            span[i] = newBox[0][i] - newBox[newBox.length - 1][i];
+            span[i] =  newBox[newBox.length - 1][i] - newBox[0][i];
             if (i > 0) {
                 spanSum[i] = spanSum[i - 1] + span[i];
             } else {
@@ -464,6 +467,7 @@ public class RCTree {
             point[0] = p;
             index = i;
             depth = d;
+            num = 1;
         }
     }
 }
