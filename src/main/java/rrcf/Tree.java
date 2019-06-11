@@ -1,4 +1,4 @@
-//package rrcf;
+package rrcf;
 
 import java.util.Map;
 import java.util.Arrays;
@@ -20,7 +20,7 @@ import java.util.function.Consumer;
  * 2712-2721).
  */
 
-public class RCTree {
+public class Tree {
     // TODO: Generic type for object
     // TODO: getSibling function
     // TODO: Add tolerance
@@ -30,7 +30,7 @@ public class RCTree {
     private Map<Object, Leaf> leavesMap;
     private Random random;
 
-    public RCTree() {
+    public Tree() {
         random = new Random();
         leavesMap = new HashMap<>();
     }
@@ -40,6 +40,10 @@ public class RCTree {
         String[] depthAndTreeString = { "", "" };
         printNodeToString(root, depthAndTreeString);
         return depthAndTreeString[1];
+    }
+
+    public int size() {
+        return leavesMap.size();
     }
 
     private void printNodeToString(Node node, String[] depthAndTreeString) {
@@ -433,41 +437,6 @@ public class RCTree {
         public Cut(int d, double v) {
             dim = d;
             value = v;
-        }
-    }
-
-    public static class Node {
-        public Branch parent;
-        public int num;
-
-        public double[][] point;
-    }
-
-    public static class Branch extends Node {
-        public int cutDimension;
-        public double cutValue;
-        public Node left;
-        public Node right;
-
-        public Branch(int dim, double cut, Node l, Node r, int n) {
-            cutDimension = dim;
-            cutValue = cut;
-            left = l;
-            right = r;
-            num = n;
-        }
-    }
-
-    public static class Leaf extends Node {
-        public Object index;
-        public int depth;
-
-        public Leaf(double[] p, Object i, int d) {
-            point = new double[1][p.length];
-            point[0] = p;
-            index = i;
-            depth = d;
-            num = 1;
         }
     }
 }
