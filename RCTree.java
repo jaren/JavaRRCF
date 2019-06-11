@@ -1,27 +1,31 @@
+package rrcf;
+
 import java.util.Map;
 import java.util.Random;
+import java.util.function.Consumer;
 
 /**
- * Robust random cut tree data structure
- * Used for anomaly detection on streaming data
+ * Robust random cut tree data structure Used for anomaly detection on streaming
+ * data
  * 
- * Modified from:
- * rrcf: Implementation of the Robust Random Cut Forest algorithm for anomaly detection on streams
- * Matthew D. Bartos1, Abhiram Mullapudi1, and Sara C. Troutman
+ * Modified from: rrcf: Implementation of the Robust Random Cut Forest algorithm
+ * for anomaly detection on streams Matthew D. Bartos1, Abhiram Mullapudi1, and
+ * Sara C. Troutman
  * 
- * Original paper:
- *  S. Guha, N. Mishra, G. Roy, & O. Schrijvers. Robust random cut forest based anomaly
- *  detection on streams, in Proceedings of the 33rd International conference on machine
- *  learning, New York, NY, 2016 (pp. 2712-2721).
+ * Original paper: S. Guha, N. Mishra, G. Roy, & O. Schrijvers. Robust random
+ * cut forest based anomaly detection on streams, in Proceedings of the 33rd
+ * International conference on machine learning, New York, NY, 2016 (pp.
+ * 2712-2721).
  */
 
 public class RCTree {
     // TODO: Generic type for object
     // TODO: getSibling function
     // TODO: Add tolerance
+    // TODO: Support existing constructor
     private Node root;
     private int ndim;
-    private Map<Object, Node> leavesMap;
+    private Map<Object, Leaf> leavesMap;
     private Random random;
 
     public RCTree() {
@@ -30,46 +34,48 @@ public class RCTree {
 
     @Override
     public String toString() {
-        // TODO
-        AtomicReference<String> depth = new AtomicReference<>();
-        AtomicReference<String> treeString = new AtomicRefernece<>();
-
-        Consumer<String> ppush = (c) -> {
-
-        };
-        Consumer<String> ppop = (c) -> {
-
-        };
-        Consumer<> printNode = (node) -> {
-
-        };
-
-        printNode(root);
-
-
-        return treeString;
+        String[] depthAndTreeString = { "", "" };
+        printNodeToString(root, depthAndTreeString);
+        return depthAndTreeString[1];
     }
 
-    private void cut() {
-
-    }
-
-    private void makeTree() {
-
+    private void printNodeToString(Node node, String[] depthAndTreeString) {
+        Consumer<Character> ppush = (c) -> {
+            String branch = String.format(" %c  ", c);
+            depthAndTreeString[0] += branch;
+        };
+        Runnable ppop = () -> {
+            depthAndTreeString[0] = depthAndTreeString[0].substring(0, depthAndTreeString[0].length() - 4);
+        };
+        if (node instanceof Leaf) {
+            depthAndTreeString[1] += String.format("(%s)\n", ((Leaf) node).index);
+        } else if (node instanceof Branch) {
+            depthAndTreeString[1] += String.format("%c+\n", 9472);
+            depthAndTreeString[1] += String.format("%c %c%c%c", depthAndTreeString[0], 9500, 9472, 9472);
+            ppush.accept((char) 9472);
+            printNodeToString(((Branch) node).left, depthAndTreeString);
+            ppop.run();
+            depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9492, 9472, 9472);
+            ppush.accept(' ');
+            printNodeToString(((Branch) node).right, depthAndTreeString);
+            ppop.run();
+        }
     }
 
     public void mapLeaves(Consumer<Leaf> func) {
         mapLeaves(func, root);
     }
+
     private void mapLeaves(Consumer<Leaf> func, Node n) {
         if (n instanceof Leaf) {
-            func(n);
+            func.accept((Leaf) n);
         } else {
-            if (left != null) {
-                mapLeaves(func, left);
+            Branch b = (Branch) n;
+            if (b.left != null) {
+                mapLeaves(func, b.left);
             }
-            if (right != null) {
-                mapLeaves(func, right);
+            if (b.right != null) {
+                mapLeaves(func, b.right);
             }
         }
     }
@@ -77,16 +83,17 @@ public class RCTree {
     public void mapBranches(Consumer<Branch> func) {
         mapBranches(func, root);
     }
+
     private void mapBranches(Consumer<Branch> func, Node n) {
         if (!(n instanceof Leaf)) {
-            Branch b = (Branch)n;
+            Branch b = (Branch) n;
             if (b.left != null) {
                 mapBranches(func, b.left);
             }
             if (b.right != null) {
                 mapBranches(func, b.right);
             }
-            func(b);
+            func.accept(b);
         }
     }
 
@@ -103,8 +110,8 @@ public class RCTree {
         // If leaf is root
         if (root.equals(leaf)) {
             root = null;
-            ndim = null;
-            return leaves.remove(index);
+            ndim = -1;
+            return leavesMap.remove(index);
         }
 
         // Calculate parent and sibling
@@ -118,16 +125,16 @@ public class RCTree {
 
         // If parent is root, set sibling to root and update depths
         if (root.equals(parent)) {
-            // { del parent }
+            // TODO: { del parent }
             sibling.parent = null;
             root = sibling;
 
             if (sibling instanceof Leaf) {
-                ((Leaf)sibling).depth = 0;
+                ((Leaf) sibling).depth = 0;
             } else {
-                mapLeaves(sibling, genIncDepth(-1));
+                mapLeaves(genIncDepth(-1), sibling);
             }
-            return leaves.remove(index);
+            return leavesMap.remove(index);
         }
 
         // Move sibling up a layer and link nodes
@@ -141,19 +148,19 @@ public class RCTree {
         parent = grandparent;
 
         // Update depths
-        mapLeaves(sibling, genIncDepth(-1));
+        mapLeaves(genIncDepth(-1), sibling);
         // Update leaf counts for each branch
         updateLeafCountUpwards(parent, -1);
         // Update bounding boxes
         tightenBoxUpwards(parent, leaf.point[0]);
-        return leaves.remove(index);
+        return leavesMap.remove(index);
     }
 
     // Insert a point into the tree and create a new leaf
     public Leaf insertPoint(double[] point, Object index) {
         // If no points, set necessary variables
         if (root == null) {
-            Leaf l = new Leaf(point, index, 0);
+            Leaf leaf = new Leaf(point, index, 0);
             root = leaf;
             ndim = point.length;
             return leavesMap.put(index, leaf);
@@ -174,8 +181,8 @@ public class RCTree {
         // No duplicates found, continue
         Node node = root;
         Branch parent = node.parent;
-        Node leaf;
-        Node branch;
+        Leaf leaf = null;
+        Branch branch = null;
         int depth = 0;
         int maxDepth = -1;
         boolean useLeftSide = false;
@@ -190,12 +197,12 @@ public class RCTree {
             Cut c = insertPointCut(point, bbox);
             if (c.value < bbox[0][c.dim] || c.value >= bbox[bbox.length - 1][c.dim]) {
                 leaf = new Leaf(point, index, depth);
-                branch = new Branch(c.dim, c.value, node, leaf, leaf.n + node.n);
+                branch = new Branch(c.dim, c.value, node, leaf, leaf.num + node.num);
                 break;
             } else {
                 depth += 1;
-                parent = node;
-                Branch b = (Branch)node;
+                Branch b = (Branch) node;
+                parent = b;
                 if (point[b.cutDimension] <= b.cutValue) {
                     node = b.left;
                     useLeftSide = true;
@@ -203,9 +210,10 @@ public class RCTree {
                     node = b.right;
                     useLeftSide = false;
                 }
-            };
+            }
+            ;
         }
-        
+
         // Check if cut was found
         assert branch != null;
 
@@ -236,8 +244,9 @@ public class RCTree {
         }
     }
 
-    // When a point is deleted, contract bounding box of nodes above point if possible
-    private void tightenBoxUpwards(Node node, double[] point) {
+    // When a point is deleted, contract bounding box of nodes above point if
+    // possible
+    private void tightenBoxUpwards(Branch node, double[] point) {
         while (node != null) {
             double[][] bbox = lrBranchBox(node);
             for (int i = 0; i < ndim; i++) {
@@ -252,9 +261,9 @@ public class RCTree {
     }
 
     // TODO: Make sure these two are not flipped ^v
-    
+
     // When a point is inserted, expand bounding box of nodes above new point
-    private void relaxBoxUpwards(Node node) {
+    private void relaxBoxUpwards(Branch node) {
         double[][] bbox = lrBranchBox(node);
         node.point = bbox;
         node = node.parent;
@@ -277,29 +286,31 @@ public class RCTree {
         }
     }
 
-    private double[][] lrBranchBBox(Branch node) {
+    private double[][] lrBranchBox(Branch node) {
         double[][] box = new double[2][ndim];
         for (int i = 0; i < ndim; i++) {
             box[0][i] = Math.min(node.left.point[0][i], node.right.point[0][i]);
-            box[1][i] = Math.max(node.left.point[node.left.point.length - 1][i], node.right.point[node.right.point.length - 1][i]);
+            box[1][i] = Math.max(node.left.point[node.left.point.length - 1][i],
+                    node.right.point[node.right.point.length - 1][i]);
         }
         return box;
     }
 
-    private Consumer<Node> genIncDepth(int increment) {
-        return (node) -> {
-            node.depth += increment;
+    private Consumer<Leaf> genIncDepth(int increment) {
+        return (leaf) -> {
+            leaf.depth += increment;
         };
     }
 
-    public Node query(double[] point) {
+    public Leaf query(double[] point) {
         return query(point, root);
     }
-    private Node query(double[] point, Node n) {
+
+    private Leaf query(double[] point, Node n) {
         if (n instanceof Leaf) {
-            return n;
+            return (Leaf) n;
         }
-        Branch b = (Branch)n;
+        Branch b = (Branch) n;
         if (point[b.cutDimension] <= b.cutValue) {
             return query(point, b.left);
         }
@@ -321,7 +332,7 @@ public class RCTree {
         } else {
             sibling = parent.left;
         }
-        return sibling.n;
+        return sibling.num;
     }
 
     public int getCollusiveDisplacement(Object key) {
@@ -354,8 +365,9 @@ public class RCTree {
     }
 
     public double[][] getBBox() {
-        return getBBox((Branch)root);
+        return getBBox((Branch) root);
     }
+
     public double[][] getBBox(Branch n) {
         double[][] box = new double[2][ndim];
         for (int i = 0; i < ndim; i++) {
@@ -364,10 +376,10 @@ public class RCTree {
         }
         mapLeaves((leaf) -> {
             for (int i = 0; i < leaf.point.length; i++) {
-                if (leaf.point[i] < box[0][i]) {
-                    box[0][i] = leaf.point[i];
-                } else if (leaf.point[i] > box[1][i]) {
-                    box[1][i] = leaf.point[i];
+                if (leaf.point[0][i] < box[0][i]) {
+                    box[0][i] = leaf.point[0][i];
+                } else if (leaf.point[0][i] > box[1][i]) {
+                    box[1][i] = leaf.point[0][i];
                 }
             }
         });
@@ -376,7 +388,7 @@ public class RCTree {
 
     // Returns a leaf containing a point if it exists
     public Leaf findDuplicate(double[] point) {
-        Node nearest = query(point);
+        Leaf nearest = query(point);
         if (nearest.point[0].equals(point)) {
             return nearest;
         }
@@ -407,7 +419,7 @@ public class RCTree {
                 break;
             }
         }
-        double value = newBox[0][dimension] + span_sum[dimension] - r;
+        double value = newBox[0][dimension] + spanSum[dimension] - r;
         return new Cut(dimension, value);
     }
 
@@ -418,6 +430,40 @@ public class RCTree {
         public Cut(int d, double v) {
             dim = d;
             value = v;
+        }
+    }
+
+    public static class Node {
+        public Branch parent;
+        public int num;
+
+        public double[][] point;
+    }
+
+    public static class Branch extends Node {
+        public int cutDimension;
+        public double cutValue;
+        public Node left;
+        public Node right;
+
+        public Branch(int dim, double cut, Node l, Node r, int n) {
+            cutDimension = dim;
+            cutValue = cut;
+            left = l;
+            right = r;
+            num = n;
+        }
+    }
+
+    public static class Leaf extends Node {
+        public Object index;
+        public int depth;
+
+        public Leaf(double[] p, Object i, int d) {
+            point = new double[1][p.length];
+            point[0] = p;
+            index = i;
+            depth = d;
         }
     }
 }
