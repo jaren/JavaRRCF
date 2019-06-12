@@ -145,7 +145,7 @@ public class Tree {
             if (sibling instanceof Leaf) {
                 ((Leaf) sibling).depth = 0;
             } else {
-                mapLeaves(genIncDepth(-1), sibling);
+                increaseLeafDepth(-1, sibling);
             }
             return leavesMap.remove(index);
         }
@@ -161,11 +161,11 @@ public class Tree {
         parent = grandparent;
 
         // Update depths
-        mapLeaves(genIncDepth(-1), sibling);
+        increaseLeafDepth(-1, sibling);
         // Update leaf counts for each branch
         updateLeafCountUpwards(parent, -1);
         // Update bounding boxes
-        tightenBoxUpwards(parent, leaf.point[0]);
+        shrinkBoxUp(parent, leaf.point[0]);
         return leavesMap.remove(index);
     }
 
@@ -184,7 +184,7 @@ public class Tree {
         assert !leavesMap.containsKey(index);
 
         // Check for duplicates and only update counts if it exists
-        Leaf duplicate = findDuplicate(point);
+        Leaf duplicate = findLeaf(point);
         if (duplicate != null) {
             updateLeafCountUpwards(duplicate, 1);
             leavesMap.put(index, duplicate);
@@ -247,9 +247,9 @@ public class Tree {
             root = branch;
         }
 
-        mapLeaves(genIncDepth(1), branch);
+        increaseLeafDepth(1, branch);
         updateLeafCountUpwards(parent, 1);
-        relaxBoxUpwards(branch);
+        expandBoxUp(branch);
         leavesMap.put(index, leaf);
         return leaf;
     }
@@ -261,27 +261,27 @@ public class Tree {
         }
     }
 
-    // When a point is deleted, contract bounding box of nodes above point if
-    // possible
-    private void tightenBoxUpwards(Branch node, double[] point) {
+    /**
+     * When a point is deleted, contract bounding box of nodes above point
+     */
+    private void shrinkBoxUp(Branch node, double[] point) {
         while (node != null) {
-            double[][] bbox = lrBranchBox(node);
+            double[][] bbox = mergeChildrenBoxes(node);
             for (int i = 0; i < ndim; i++) {
                 if (bbox[0][i] == point[i] || bbox[bbox.length - 1][i] == point[i]) {
                     return;
                 }
             }
-            // TODO: Reference copy is okay?
             node.point = bbox;
             node = node.parent;
         }
     }
 
-    // TODO: Make sure these two are not flipped ^v
-
-    // When a point is inserted, expand bounding box of nodes above new point
-    private void relaxBoxUpwards(Branch node) {
-        double[][] bbox = lrBranchBox(node);
+    /**
+     * When a point is inserted, expand bounding box of nodes above new point
+     */
+    private void expandBoxUp(Branch node) {
+        double[][] bbox = mergeChildrenBoxes(node);
         node.point = bbox;
         node = node.parent;
         while (node != null) {
@@ -303,7 +303,10 @@ public class Tree {
         }
     }
 
-    private double[][] lrBranchBox(Branch node) {
+    /**
+     * Get bounding box of branch based on its children
+     */
+    private double[][] mergeChildrenBoxes(Branch node) {
         double[][] box = new double[2][ndim];
         for (int i = 0; i < ndim; i++) {
             box[0][i] = Math.min(node.left.point[0][i], node.right.point[0][i]);
@@ -313,31 +316,49 @@ public class Tree {
         return box;
     }
 
-    private Consumer<Leaf> genIncDepth(int increment) {
-        return (leaf) -> {
+    /**
+     * Adds `increment` to all leaves' depths under a node
+     */
+    private void increaseLeafDepth(int increment, Node n) {
+        mapLeaves((leaf) -> {
             leaf.depth += increment;
-        };
+        }, n);
     }
 
+    /**
+     * Wrapper for query from root
+     */
     public Leaf query(double[] point) {
         return query(point, root);
     }
 
+    /**
+     * Finds the closest leaf to a point under a specified node
+     */
     private Leaf query(double[] point, Node n) {
-        if (n instanceof Leaf) {
-            return (Leaf) n;
+        while (!(n instanceof Leaf)) {
+            Branch b = (Branch) n;
+            if (point[b.cutDimension] <= b.cutValue) {
+                n = b.left;
+            } else {
+                n = b.right;
+            }
         }
-        Branch b = (Branch) n;
-        if (point[b.cutDimension] <= b.cutValue) {
-            return query(point, b.left);
-        }
-        return query(point, b.right);
+        return (Leaf) n;
     }
 
+    /**
+     * Wrapper for getDisplacment by leaf
+     */
     public int getDisplacement(Object key) {
         return getDisplacement(leavesMap.get(key));
     }
 
+    /**
+     * The number of nodes displaced by removing a leaf
+     * Removing a leaf shorts the sibling to the leaf's grandparent, so displacement is the sibling's count
+     * Can serve as a measure for outliers, but is affected by masking
+     */
     public int getDisplacement(Leaf leaf) {
         if (leaf.equals(root)) {
             return 0;
@@ -352,10 +373,18 @@ public class Tree {
         return sibling.num;
     }
 
+    /**
+     * Wrapper for gcd by leaf
+     */
     public int getCollusiveDisplacement(Object key) {
         return getCollusiveDisplacement(leavesMap.get(key));
     }
 
+    /**
+     * The maximum number of nodes displaced by removing any subset of the tree including a leaf 
+     * In practice, there are too many subsets to consider so it can be estimated by looking up the tree
+     * There is no definitive algorithm to empirically calculate codisp, so the ratio of sibling num to node num is used
+     */
     public int getCollusiveDisplacement(Leaf leaf) {
         if (leaf.equals(root)) {
             return 0;
@@ -381,30 +410,10 @@ public class Tree {
         return maxResult;
     }
 
-    public double[][] getBBox() {
-        return getBBox((Branch) root);
-    }
-
-    public double[][] getBBox(Branch n) {
-        double[][] box = new double[2][ndim];
-        for (int i = 0; i < ndim; i++) {
-            box[0][i] = Double.MIN_VALUE;
-            box[1][i] = Double.MAX_VALUE;
-        }
-        mapLeaves((leaf) -> {
-            for (int i = 0; i < leaf.point.length; i++) {
-                if (leaf.point[0][i] < box[0][i]) {
-                    box[0][i] = leaf.point[0][i];
-                } else if (leaf.point[0][i] > box[1][i]) {
-                    box[1][i] = leaf.point[0][i];
-                }
-            }
-        });
-        return box;
-    }
-
-    // Returns a leaf containing a point if it exists
-    public Leaf findDuplicate(double[] point) {
+    /**
+     * Returns a leaf containing a point if it exists
+     */
+    public Leaf findLeaf(double[] point) {
         Leaf nearest = query(point);
         if (nearest.point[0].equals(point)) {
             return nearest;
@@ -412,9 +421,13 @@ public class Tree {
         return null;
     }
 
+    /**
+     * Generates a random cut from the span of a point and bounding box
+     */
     private Cut insertPointCut(double[] point, double[][] bbox) {
         double[][] newBox = new double[bbox.length][bbox[0].length];
         double[] span = new double[bbox[0].length];
+        // Cumulative sum of span
         double[] spanSum = new double[bbox[0].length];
         for (int i = 0; i < ndim; i++) {
             newBox[0][i] = Math.min(bbox[0][i], point[i]);
@@ -426,22 +439,29 @@ public class Tree {
                 spanSum[i] = span[0];
             }
         }
-        // Random cut
+        // Weighted random with each dimension's span
         double range = spanSum[spanSum.length - 1];
         double r = random.nextDouble() * range;
         int dimension = -1;
         for (int i = 0; i < ndim; i++) {
+            // Finds first value greater or equal to chosen
             if (spanSum[i] >= r) {
                 dimension = i;
                 break;
             }
         }
+        assert dimension > -1;
         double value = newBox[0][dimension] + spanSum[dimension] - r;
         return new Cut(dimension, value);
     }
 
+    /** 
+     * Java doesn't have tuples :(
+     */
     public static class Cut {
+        // Dimension of cut
         public int dim;
+        // Value of cut
         public double value;
 
         public Cut(int d, double v) {
