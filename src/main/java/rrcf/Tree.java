@@ -7,8 +7,10 @@ import java.util.Random;
 import java.util.function.Consumer;
 
 /**
- * Robust random cut tree data structure Used for anomaly detection on streaming
+ * Robust random cut tree data structure used for anomaly detection on streaming
  * data
+ * 
+ * Represents a single tree
  * 
  * Modified from: rrcf: Implementation of the Robust Random Cut Forest algorithm
  * for anomaly detection on streams Matthew D. Bartos1, Abhiram Mullapudi1, and
@@ -30,9 +32,13 @@ public class Tree {
     private Map<Object, Leaf> leavesMap;
     private Random random;
 
-    public Tree() {
-        random = new Random();
+    public Tree(Random r) {
         leavesMap = new HashMap<>();
+        random = r;
+    }
+
+    public Tree() {
+        this(new Random());
     }
 
     @Override
@@ -194,6 +200,7 @@ public class Tree {
         int maxDepth = -1;
         boolean useLeftSide = false;
         // TODO: O(n) operation, maybe cache?
+        // Find out whether this is actually necessary
         for (Leaf l : leavesMap.values()) {
             if (l.depth > maxDepth)
                 maxDepth = l.depth;
@@ -202,7 +209,11 @@ public class Tree {
         for (int i = 0; i < maxDepth + 1; i++) {
             double[][] bbox = node.point;
             Cut c = insertPointCut(point, bbox);
-            if (c.value < bbox[0][c.dim] || c.value >= bbox[bbox.length - 1][c.dim]) {
+            if (c.value <= bbox[0][c.dim]) {
+                leaf = new Leaf(point, index, depth);
+                branch = new Branch(c.dim, c.value, leaf, node, leaf.num + node.num);
+                break;
+            } else if (c.value >= bbox[bbox.length - 1][c.dim]) {
                 leaf = new Leaf(point, index, depth);
                 branch = new Branch(c.dim, c.value, node, leaf, leaf.num + node.num);
                 break;
@@ -218,7 +229,6 @@ public class Tree {
                     useLeftSide = false;
                 }
             }
-            ;
         }
 
         // Check if cut was found

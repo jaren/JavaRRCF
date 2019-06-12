@@ -1,5 +1,9 @@
 package rrcf;
 
+/**
+ * Represents a collection of trees
+ * Handles point addition and score averaging
+ */
 public class Forest {
     private Tree[] trees;
     private int treeSize;

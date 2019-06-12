@@ -3,6 +3,12 @@ package rrcf;
 import java.util.Deque;
 import java.util.ArrayDeque;
 
+/**
+ * Represents a forest with support for shingling
+ * Rather than adding single multi-dimensional points,
+ *  multiple one-dimensional points are added and grouped together
+ *  with rolling windows
+ */
 public class ShingledForest extends Forest {
     private int shingleSize;
     private Deque<Double> buffer;
