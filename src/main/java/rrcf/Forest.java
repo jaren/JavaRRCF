@@ -5,12 +5,13 @@ public class Forest {
     private int treeSize;
     private int currentIndex;
 
-    public Forest(int numTrees, int treeSize) {
+    public Forest(int numTrees, int size) {
         trees = new Tree[numTrees];
         for (int i = 0; i < numTrees; i++) {
             trees[i] = new Tree();
         }
         currentIndex = 0;
+        treeSize = size;
     }
 
     public double addPoint(double[] point) {

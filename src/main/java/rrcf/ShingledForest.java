@@ -1,26 +1,39 @@
 package rrcf;
 
+import java.util.Deque;
+import java.util.ArrayDeque;
+
 public class ShingledForest extends Forest {
     private int shingleSize;
-    private double[] buffer;
-    private int shingleIndex;
+    private Deque<Double> buffer;
 
     public ShingledForest(int shingleSize, int numTrees, int treeSize) {
         super(numTrees, treeSize);
-        buffer = new double[shingleSize];
-        shingleIndex = 0;
+        this.shingleSize = shingleSize;
+        buffer = new ArrayDeque<>();
     }
 
-    public Double addPoint(double value) {
-        buffer[shingleIndex] = value;
-        shingleIndex++;
-        if (shingleIndex == shingleSize) {
-            double result = super.addPoint(buffer);
-            buffer = new double[shingleSize];
-            shingleIndex = 0;
-            return result;
+    public double addPoint(double value) {
+        buffer.addLast(value);
+        if (buffer.size() <= shingleSize) {
+            return 0;
         } else {
-            return null;
+            buffer.removeFirst();
+            return super.addPoint(unboxArray(buffer.toArray(new Double[buffer.size()])));
         }
+    }
+
+    private double[] unboxArray(Double[] arr) {
+        double[] output = new double[arr.length];
+        for (int i = 0; i < arr.length; i++) {
+            output[i] = arr[i];
+        }
+        return output;
+    }
+
+    @Override
+    public double addPoint(double[] value) {
+        assert value.length == 1;
+        return addPoint(value[0]);
     }
 }
