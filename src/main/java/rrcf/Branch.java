@@ -1,5 +1,9 @@
 package rrcf;
 
+/**
+ * Represents a node with two children
+ * Represents a branch in a BST on [cutDimension, cutValue]
+ */
 public class Branch extends Node {
     public int cutDimension;
     public double cutValue;

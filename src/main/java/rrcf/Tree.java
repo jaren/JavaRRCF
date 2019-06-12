@@ -10,7 +10,7 @@ import java.util.function.Consumer;
  * Robust random cut tree data structure used for anomaly detection on streaming
  * data
  * 
- * Represents a single tree
+ * Represents a single random cut tree
  * 
  * Modified from: rrcf: Implementation of the Robust Random Cut Forest algorithm
  * for anomaly detection on streams Matthew D. Bartos1, Abhiram Mullapudi1, and
@@ -21,14 +21,11 @@ import java.util.function.Consumer;
  * International conference on machine learning, New York, NY, 2016 (pp.
  * 2712-2721).
  */
-
 public class Tree {
-    // TODO: Generic type for object
-    // TODO: getSibling function
-    // TODO: Add tolerance
-    // TODO: Support existing constructor
     private Node root;
+    // Number of dimensions for each point
     private int ndim;
+    // Allows leaves to be accessed with external key
     private Map<Object, Leaf> leavesMap;
     private Random random;
 
@@ -48,10 +45,18 @@ public class Tree {
         return depthAndTreeString[1];
     }
 
+    /**
+     * Number of points stored in the tree
+     */
     public int size() {
-        return leavesMap.size();
+        if (root == null) return 0;
+        return root.num;
     }
 
+    /**
+     * Prints a node to provided string
+     * Updates the given string array: { depth, tree } strings
+     */
     private void printNodeToString(Node node, String[] depthAndTreeString) {
         Consumer<Character> ppush = (c) -> {
             String branch = String.format(" %c  ", c);
@@ -110,7 +115,9 @@ public class Tree {
         }
     }
 
-    // Delete a leaf from the tree and return deleted node
+    /**
+     * Delete a leaf (found from index) from the tree and return deleted node
+     */
     public Node forgetPoint(Object index) {
         Node leaf = leavesMap.get(index);
 
@@ -129,19 +136,15 @@ public class Tree {
 
         // Calculate parent and sibling
         Branch parent = leaf.parent;
-        Node sibling;
-        if (leaf.equals(parent.left)) {
-            sibling = parent.right;
-        } else {
-            sibling = parent.left;
-        }
+        Node sibling = getSibling(leaf);
 
         // If parent is root, set sibling to root and update depths
         if (root.equals(parent)) {
-            // TODO: { del parent }
             sibling.parent = null;
+            leaf.parent = null; // In case the returned node is used somehow
             root = sibling;
 
+            // TODO: This shouldn't be necessary
             if (sibling instanceof Leaf) {
                 ((Leaf) sibling).depth = 0;
             } else {
@@ -169,7 +172,9 @@ public class Tree {
         return leavesMap.remove(index);
     }
 
-    // Insert a point into the tree and create a new leaf
+    /**
+     * Insert a point into the tree with a given index and create a new leaf
+     */
     public Leaf insertPoint(double[] point, Object index) {
         // If no points, set necessary variables
         if (root == null) {
@@ -193,14 +198,13 @@ public class Tree {
 
         // No duplicates found, continue
         Node node = root;
-        Branch parent = node.parent;
+        Branch parent = null;
         Leaf leaf = null;
         Branch branch = null;
-        int depth = 0;
         int maxDepth = -1;
         boolean useLeftSide = false;
         // TODO: O(n) operation, maybe cache?
-        // Find out whether this is actually necessary
+        // TODO: Find out whether this is actually necessary
         for (Leaf l : leavesMap.values()) {
             if (l.depth > maxDepth)
                 maxDepth = l.depth;
@@ -210,15 +214,14 @@ public class Tree {
             double[][] bbox = node.point;
             Cut c = insertPointCut(point, bbox);
             if (c.value <= bbox[0][c.dim]) {
-                leaf = new Leaf(point, index, depth);
+                leaf = new Leaf(point, index, i);
                 branch = new Branch(c.dim, c.value, leaf, node, leaf.num + node.num);
                 break;
             } else if (c.value >= bbox[bbox.length - 1][c.dim]) {
-                leaf = new Leaf(point, index, depth);
+                leaf = new Leaf(point, index, i);
                 branch = new Branch(c.dim, c.value, node, leaf, leaf.num + node.num);
                 break;
             } else {
-                depth += 1;
                 Branch b = (Branch) node;
                 parent = b;
                 if (point[b.cutDimension] <= b.cutValue) {
@@ -254,10 +257,24 @@ public class Tree {
         return leaf;
     }
 
-    private void updateLeafCountUpwards(Node leaf, int increment) {
-        while (leaf != null) {
-            leaf.num += increment;
-            leaf = leaf.parent;
+    /**
+     * Gets the sibling of a node
+     */
+    private Node getSibling(Node n) {
+        Branch parent = n.parent;
+        if (n.equals(parent.left)) {
+            return parent.right;
+        }
+        return parent.left;
+    }
+
+    /**
+     * Increases the leaf number for all ancestors above a given node by increment
+     */
+    private void updateLeafCountUpwards(Node node, int increment) {
+        while (node != null) {
+            node.num += increment;
+            node = node.parent;
         }
     }
 
