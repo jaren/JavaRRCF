@@ -14,9 +14,10 @@ public class RRCFTest {
         int shingleSize = Integer.parseInt(args[0]);
         int numTrees = Integer.parseInt(args[1]);
         int treeSize = Integer.parseInt(args[2]);
+        Random random = new Random(Integer.parseInt(args[3]));
         Scanner input = new Scanner(System.in);
         System.out.println("\"x\",\"y\",\"value\"");
-        ShingledForest f = new ShingledForest(shingleSize, numTrees, treeSize);
+        ShingledForest f = new ShingledForest(random, shingleSize, numTrees, treeSize);
         int i = 0;
         while (input.hasNextLine()) {
             double val = Double.parseDouble(input.nextLine());

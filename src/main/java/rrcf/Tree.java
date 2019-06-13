@@ -143,13 +143,7 @@ public class Tree implements Serializable {
             sibling.parent = null;
             leaf.parent = null; // In case the returned node is used somehow
             root = sibling;
-
-            // TODO: This shouldn't be necessary
-            if (sibling instanceof Leaf) {
-                ((Leaf) sibling).depth = 0;
-            } else {
-                increaseLeafDepth(-1, sibling);
-            }
+            increaseLeafDepth(-1, sibling);
             return leavesMap.remove(index);
         }
 
