@@ -2,6 +2,7 @@ package rrcf;
 
 import java.util.Deque;
 import java.util.ArrayDeque;
+import java.io.Serializable;
 
 /**
  * Represents a forest with support for shingling
@@ -9,7 +10,7 @@ import java.util.ArrayDeque;
  *  multiple one-dimensional points are added and grouped together
  *  with rolling windows
  */
-public class ShingledForest extends Forest {
+public class ShingledForest extends Forest implements Serializable {
     private int shingleSize;
     private Deque<Double> buffer;
 

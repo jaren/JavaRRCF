@@ -1,10 +1,12 @@
 package rrcf;
 
+import java.io.Serializable;
+
 /**
  * Represents a node with two children
  * Represents a branch in a BST on [cutDimension, cutValue]
  */
-public class Branch extends Node {
+public class Branch extends Node implements Serializable {
     public int cutDimension;
     public double cutValue;
     public Node left;

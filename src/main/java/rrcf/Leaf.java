@@ -1,10 +1,12 @@
 package rrcf;
 
+import java.io.Serializable;
+
 /**
  * Represents a node with no children
  * Stores a single point or duplicate points
  */
-public class Leaf extends Node {
+public class Leaf extends Node implements Serializable {
     // How to access this leaf in the tree
     // Only stored for printing
     // TODO: Can probably remove this later

@@ -1,9 +1,11 @@
 package rrcf;
 
+import java.io.Serializable;
+
 /**
  * Base class for nodes in a tree
  */
-public class Node {
+public class Node implements Serializable {
     public Branch parent;
     // Represents either number of leaves or number of duplicates in a leaf
     // Representation depends on whether the node is a branch or leaf

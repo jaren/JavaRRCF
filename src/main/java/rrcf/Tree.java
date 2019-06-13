@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.function.Consumer;
+import java.io.Serializable;
 
 /**
  * Robust random cut tree data structure used for anomaly detection on streaming
@@ -21,7 +22,7 @@ import java.util.function.Consumer;
  * International conference on machine learning, New York, NY, 2016 (pp.
  * 2712-2721).
  */
-public class Tree {
+public class Tree implements Serializable {
     private Node root;
     // Number of dimensions for each point
     private int ndim;
@@ -49,8 +50,7 @@ public class Tree {
      * Number of points stored in the tree
      */
     public int size() {
-        if (root == null) return 0;
-        return root.num;
+        return leavesMap.size();
     }
 
     /**
@@ -201,16 +201,9 @@ public class Tree {
         Branch parent = null;
         Leaf leaf = null;
         Branch branch = null;
-        int maxDepth = -1;
         boolean useLeftSide = false;
-        // TODO: O(n) operation, maybe cache?
-        // TODO: Find out whether this is actually necessary
-        for (Leaf l : leavesMap.values()) {
-            if (l.depth > maxDepth)
-                maxDepth = l.depth;
-        }
         // Traverse tree until insertion spot found
-        for (int i = 0; i < maxDepth + 1; i++) {
+        for (int i = 0; i < size(); i++) {
             double[][] bbox = node.point;
             Cut c = insertPointCut(point, bbox);
             if (c.value <= bbox[0][c.dim]) {
@@ -280,16 +273,22 @@ public class Tree {
 
     /**
      * When a point is deleted, contract bounding box of nodes above point
+     * If the deleted point was on the boundary for any dimension
      */
     private void shrinkBoxUp(Branch node, double[] point) {
         while (node != null) {
-            double[][] bbox = mergeChildrenBoxes(node);
+            // Check if any of the current box's values match the point
+            // Can exit otherwise, no shrinking necessary
             for (int i = 0; i < ndim; i++) {
-                if (bbox[0][i] == point[i] || bbox[bbox.length - 1][i] == point[i]) {
+                if (node.point[0][i] == point[i] || node.point[node.point.length - 1][i] == point[i]) {
+                    break;
+                }
+                if (i == ndim - 1) {
+                    // None equal
                     return;
                 }
             }
-            node.point = bbox;
+            node.point = mergeChildrenBoxes(node);
             node = node.parent;
         }
     }
