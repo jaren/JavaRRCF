@@ -66,7 +66,7 @@ public class Tree implements Serializable {
             depthAndTreeString[0] = depthAndTreeString[0].substring(0, depthAndTreeString[0].length() - 4);
         };
         if (node instanceof Leaf) {
-            depthAndTreeString[1] += String.format("(%s)\n", ((Leaf) node).index);
+            depthAndTreeString[1] += String.format("(%s)\n", Arrays.toString(node.point));
         } else if (node instanceof Branch) {
             depthAndTreeString[1] += String.format("%c+\n", 9472);
             depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9500, 9472, 9472);
@@ -172,7 +172,7 @@ public class Tree implements Serializable {
     public Leaf insertPoint(double[] point, Object index) {
         // If no points, set necessary variables
         if (root == null) {
-            Leaf leaf = new Leaf(point, index, 0);
+            Leaf leaf = new Leaf(point, 0);
             root = leaf;
             ndim = point.length;
             return leavesMap.put(index, leaf);
@@ -201,11 +201,11 @@ public class Tree implements Serializable {
             double[][] bbox = node.point;
             Cut c = insertPointCut(point, bbox);
             if (c.value <= bbox[0][c.dim]) {
-                leaf = new Leaf(point, index, i);
+                leaf = new Leaf(point, i);
                 branch = new Branch(c.dim, c.value, leaf, node, leaf.num + node.num);
                 break;
             } else if (c.value >= bbox[bbox.length - 1][c.dim]) {
-                leaf = new Leaf(point, index, i);
+                leaf = new Leaf(point, i);
                 branch = new Branch(c.dim, c.value, node, leaf, leaf.num + node.num);
                 break;
             } else {
