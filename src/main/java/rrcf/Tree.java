@@ -374,12 +374,7 @@ public class Tree implements Serializable {
             return 0;
         }
         Branch parent = leaf.parent;
-        Node sibling;
-        if (leaf.equals(parent.left)) {
-            sibling = parent.right;
-        } else {
-            sibling = parent.left;
-        }
+        Node sibling = getSibling(leaf);
         return sibling.num;
     }
 

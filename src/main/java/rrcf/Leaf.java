@@ -9,7 +9,6 @@ import java.io.Serializable;
 public class Leaf extends Node implements Serializable {
     // How to access this leaf in the tree
     // Only stored for printing
-    // TODO: Can probably remove this later
     public Object index;
     public int depth;
 
