@@ -1,7 +1,9 @@
+package rrcf;
+
 import java.util.Random;
 import java.util.Scanner;
 
-import rrcf.ShingledForest;
+import rrcf.general.SimpleShingledForest;
 
 /**
  * Reads numbers from stdin
@@ -9,7 +11,7 @@ import rrcf.ShingledForest;
  * 
  * Args: shingleSize numTrees treeSize
  */
-public class RRCFTest {
+public class SimpleShingleCsv {
     public static void main(String[] args) {
         int shingleSize = Integer.parseInt(args[0]);
         int numTrees = Integer.parseInt(args[1]);
@@ -17,7 +19,7 @@ public class RRCFTest {
         Random random = new Random(Integer.parseInt(args[3]));
         Scanner input = new Scanner(System.in);
         System.out.println("\"x\",\"y\",\"value\"");
-        ShingledForest f = new ShingledForest(random, shingleSize, numTrees, treeSize);
+        SimpleShingledForest f = new SimpleShingledForest(random, shingleSize, numTrees, treeSize);
         int i = 0;
         while (input.hasNextLine()) {
             double val = Double.parseDouble(input.nextLine());

@@ -15,17 +15,17 @@ import java.io.Serializable;
  *  with rolling windows
  */
 @Deprecated
-public class NaiveShingledForest extends RCForest implements Serializable {
+public class SimpleShingledForest extends RCForest implements Serializable {
     private int shingleSize;
     private Deque<Double> buffer;
 
-    public NaiveShingledForest(Random random, int shingleSize, int numTrees, int treeSize) {
+    public SimpleShingledForest(Random random, int shingleSize, int numTrees, int treeSize) {
         super(random, numTrees, treeSize);
         this.shingleSize = shingleSize;
         buffer = new ArrayDeque<>();
     }
 
-    public NaiveShingledForest(int shingleSize, int numTrees, int treeSize) {
+    public SimpleShingledForest(int shingleSize, int numTrees, int treeSize) {
         this(new Random(), shingleSize, numTrees, treeSize);
     }
 

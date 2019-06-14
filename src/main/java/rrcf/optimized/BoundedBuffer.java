@@ -9,17 +9,30 @@ public class BoundedBuffer<T> {
     private T[] buffer;
     private int bufferStartIndex;
     private int size;
-    private long streamStartIndex;
+    private long streamIndex;
 
     public BoundedBuffer(int bound) {
         buffer = (T[])new Object[bound];
         bufferStartIndex = 0;
         size = 0;
-        streamStartIndex = 0;
+        streamIndex = 0;
+    }
+
+    public boolean full() {
+        // Should never be greater
+        return size() >= buffer.length;
     }
 
     public int size() {
         return size;
+    }
+
+    public long streamStartIndex() {
+        return streamIndex;
+    }
+    
+    public long streamLatestIndex() {
+        return streamIndex + size;
     }
 
     /**
@@ -28,7 +41,7 @@ public class BoundedBuffer<T> {
      * @return Value at index
      */
     public T get(long index) {
-        int adjustedIndex = index - streamStartIndex;
+        int adjustedIndex = (int)(index - streamIndex);
         if (adjustedIndex > size) {
             throw new ArrayIndexOutOfBoundsException("Element out of bounds of buffer");
         }
@@ -37,17 +50,18 @@ public class BoundedBuffer<T> {
 
     /**
      * Adds an item to the buffer
-     * @return Whether or not the first item was deleted
+     * Removes first item if necessary
+     * @return Removed item or null
      */
-    public boolean add(T value) {
+    public T add(T value) {
+        T obj = buffer[getOffsetBufferIndex(size)];
         buffer[getOffsetBufferIndex(size)] = value;
-        if (size < buffer.length) {
+        if (!full()) {
             size++;
-            return false;
         } else {
             bufferStartIndex = getOffsetBufferIndex(1);
-            return true;
         }
+        return obj;
     }
 
     private int getOffsetBufferIndex(int num) {

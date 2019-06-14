@@ -202,16 +202,16 @@ public class RCTree implements Serializable {
             Cut c = insertPointCut(point, bbox);
             if (c.value <= bbox[0][c.dim]) {
                 leaf = new RCLeaf(point, i);
-                branch = new RCBranch(c.dim, c.value, leaf, node, leaf.num + node.num);
+                branch = new RCBranch(c, leaf, node, leaf.num + node.num);
                 break;
             } else if (c.value >= bbox[bbox.length - 1][c.dim]) {
                 leaf = new RCLeaf(point, i);
-                branch = new RCBranch(c.dim, c.value, node, leaf, leaf.num + node.num);
+                branch = new RCBranch(c, node, leaf, leaf.num + node.num);
                 break;
             } else {
                 RCBranch b = (RCBranch) node;
                 parent = b;
-                if (point[b.cutDimension] <= b.cutValue) {
+                if (point[b.cut.dim] <= b.cut.value) {
                     node = b.left;
                     useLeftSide = true;
                 } else {
@@ -348,7 +348,7 @@ public class RCTree implements Serializable {
     private RCLeaf query(double[] point, RCNode n) {
         while (!(n instanceof RCLeaf)) {
             RCBranch b = (RCBranch) n;
-            if (point[b.cutDimension] <= b.cutValue) {
+            if (point[b.cut.dim] <= b.cut.value) {
                 n = b.left;
             } else {
                 n = b.right;
