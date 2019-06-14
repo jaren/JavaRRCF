@@ -1,4 +1,4 @@
-package rrcf.optimized;
+package rrcf.memory;
 
 /**
  * Represents a shingled point stored in a BoundedBuffer
@@ -10,6 +10,7 @@ public class ShingledPoint {
 
     public ShingledPoint(BoundedBuffer<Double> buffer, long startIndex, int size) {
         this.buffer = buffer;
+        this.startIndex = startIndex;
         this.size = size;
     }
 

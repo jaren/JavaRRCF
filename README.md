@@ -7,7 +7,8 @@
 * Includes generalized versions of Random Cut Trees and Random Cut Forests
 * Supports multidimensional data
 
-#### Optimized package:
+#### Memory package:
+* Less time efficient
 * Potentially decreases memory usage by orders of magnitude
 * Intended for use with single-dimensional data
-* Automatically handles data shingling in a space-efficient manner
+* Automatically handles data shingling

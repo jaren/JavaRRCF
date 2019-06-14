@@ -1,4 +1,4 @@
-package rrcf.optimized;
+package rrcf.memory;
 
 import java.util.Map;
 import java.util.Arrays;
@@ -6,9 +6,9 @@ import java.util.HashMap;
 import java.util.Random;
 import java.util.function.Consumer;
 
-import rrcf.optimized.ShingledBranch;
-import rrcf.optimized.ShingledLeaf;
-import rrcf.optimized.ShingledNode;
+import rrcf.memory.ShingledBranch;
+import rrcf.memory.ShingledLeaf;
+import rrcf.memory.ShingledNode;
 
 import java.io.Serializable;
 
@@ -20,6 +20,7 @@ import java.io.Serializable;
  */
 public class ShingledTree implements Serializable {
     // TODO: Test with leaves map / array instead of getting leaves at runtime
+    // TODO: Replace with floats?
     private ShingledNode root;
     private int dimension;
     private Random random;
@@ -45,7 +46,6 @@ public class ShingledTree implements Serializable {
      * Updates the given string array: { depth, tree } strings
      */
     private void printNodeToString(ShingledNode node, String[] depthAndTreeString) {
-        // TODO: Make nicer
         Consumer<Character> ppush = (c) -> {
             String branch = String.format(" %c  ", c);
             depthAndTreeString[0] += branch;
@@ -150,7 +150,6 @@ public class ShingledTree implements Serializable {
 
     /**
      * Insert a point into the tree with a given index and create a new leaf
-     * WARNING: O(n) operation
      */
     public ShingledLeaf insertPoint(ShingledPoint point) {
         // If no points, set necessary variables
@@ -176,12 +175,13 @@ public class ShingledTree implements Serializable {
         ShingledLeaf leaf = null;
         ShingledBranch branch = null;
         boolean useLeftSide = false;
-        // Update bounding boxes at each step down the tree
-        double[][] boundingBox = generateBoundingBox();
-        double[] minPoint = boundingBox[0];
-        double[] maxPoint = boundingBox[1];
         // Traverse tree until insertion spot found
         while (true) {
+            // Update bounding boxes at each step down the tree
+            // NOTE: VERY INEFFICIENT, SHOULD ONLY BE TEMPORARY
+            double[][] boundingBox = generateBoundingBox(node);
+            double[] minPoint = boundingBox[0];
+            double[] maxPoint = boundingBox[1];
             Cut c = insertPointCut(point, minPoint, maxPoint);
             if (c.value <= minPoint[c.dim]) {
                 leaf = new ShingledLeaf(point);
@@ -196,11 +196,9 @@ public class ShingledTree implements Serializable {
                 parent = b;
                 if (point.get(b.cut.dim) <= b.cut.value) {
                     node = b.left;
-                    maxPoint[b.cut.dim] = b.cut.value;
                     useLeftSide = true;
                 } else {
                     node = b.right;
-                    minPoint[b.cut.dim] = b.cut.value;
                     useLeftSide = false;
                 }
             }
@@ -251,7 +249,7 @@ public class ShingledTree implements Serializable {
      * Generates a bounding box for use on point insertion
      * WARNING: O(n) operation
      */
-    private double[][] generateBoundingBox() {
+    private double[][] generateBoundingBox(ShingledNode n) {
         double[][] box = new double[2][dimension];
         for (int i = 0; i < dimension; i++) {
             box[0][i] = Double.MAX_VALUE;
@@ -266,7 +264,7 @@ public class ShingledTree implements Serializable {
                     box[1][i] = leaf.point.get(i);
                 }
             }
-        });
+        }, n);
         return box;
     }
 
@@ -350,17 +348,17 @@ public class ShingledTree implements Serializable {
         // Weighted random with each dimension's span
         double range = spanSum[spanSum.length - 1];
         double r = random.nextDouble() * range;
-        int dimension = -1;
+        int cutDim = -1;
         for (int i = 0; i < dimension; i++) {
             // Finds first value greater or equal to chosen
             if (spanSum[i] >= r) {
-                dimension = i;
+                cutDim = i;
                 break;
             }
         }
-        assert dimension > -1;
-        double value = newMinBox[dimension] + spanSum[dimension] - r;
-        return new Cut(dimension, value);
+        assert cutDim > -1;
+        double value = newMinBox[cutDim] + spanSum[cutDim] - r;
+        return new Cut(cutDim, value);
     }
 
     /** 

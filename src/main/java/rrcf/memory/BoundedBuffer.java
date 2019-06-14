@@ -1,4 +1,6 @@
-package rrcf.optimized;
+package rrcf.memory;
+
+import java.util.Arrays;
 
 /**
  * Represents a buffer for infinite streaming data
@@ -30,10 +32,6 @@ public class BoundedBuffer<T> {
     public long streamStartIndex() {
         return streamIndex;
     }
-    
-    public long streamLatestIndex() {
-        return streamIndex + size;
-    }
 
     /**
      * Gets an item at a logical index in a stream
@@ -45,26 +43,37 @@ public class BoundedBuffer<T> {
         if (adjustedIndex > size) {
             throw new ArrayIndexOutOfBoundsException("Element out of bounds of buffer");
         }
+        if (adjustedIndex < 0) {
+            throw new ArrayIndexOutOfBoundsException("Element already removed from buffer");
+        }
         return buffer[getOffsetBufferIndex(adjustedIndex)];
     }
 
     /**
      * Adds an item to the buffer
-     * Removes first item if necessary
-     * @return Removed item or null
+     * Removes oldest item if necessary
+     * @return Index of item
      */
-    public T add(T value) {
-        T obj = buffer[getOffsetBufferIndex(size)];
+    public long add(T value) {
         buffer[getOffsetBufferIndex(size)] = value;
         if (!full()) {
             size++;
         } else {
+            streamIndex++;
             bufferStartIndex = getOffsetBufferIndex(1);
         }
-        return obj;
+        return streamIndex + size - 1;
     }
 
     private int getOffsetBufferIndex(int num) {
         return (bufferStartIndex + num) % buffer.length;
+    }
+
+    public T[] toArray() {
+        T[] arr = (T[])new Object[size];
+        for (int i = 0; i < size; i++) {
+            arr[i] = get(streamIndex + i);
+        }
+        return arr;
     }
 }

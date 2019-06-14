@@ -6,15 +6,11 @@ import java.util.Random;
 import java.io.Serializable;
 
 /**
- * WARNING: This class has been superseded by rrcf.optimized.ShingledForest
- * The alternative is much more space-efficient
- * 
  * Represents a forest with support for shingling
  * Rather than adding single multi-dimensional points,
  *  multiple one-dimensional points are added and grouped together
  *  with rolling windows
  */
-@Deprecated
 public class SimpleShingledForest extends RCForest implements Serializable {
     private int shingleSize;
     private Deque<Double> buffer;

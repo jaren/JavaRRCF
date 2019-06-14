@@ -1,4 +1,4 @@
-package rrcf.optimized;
+package rrcf.memory;
 
 public class ShingledLeaf extends ShingledNode {
     public ShingledPoint point;

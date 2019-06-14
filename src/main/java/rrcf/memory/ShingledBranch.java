@@ -1,6 +1,6 @@
-package rrcf.optimized;
+package rrcf.memory;
 
-import rrcf.optimized.ShingledTree.Cut;
+import rrcf.memory.ShingledTree.Cut;
 
 public class ShingledBranch extends ShingledNode {
     public Cut cut;

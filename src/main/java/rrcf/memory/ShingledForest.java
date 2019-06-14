@@ -1,7 +1,8 @@
-package rrcf.optimized;
+package rrcf.memory;
 
 import java.util.Deque;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Random;
 import java.io.Serializable;
 
@@ -46,10 +47,9 @@ public class ShingledForest implements Serializable {
                     tree.forgetPoint(oldestPoint);
                 }
             }
-            buffer.add(value);
-            // TODO: Check math
+            long index = buffer.add(value);
             double val = 0;
-            ShingledPoint s = new ShingledPoint(buffer, buffer.streamLatestIndex() - shingleSize + 1, shingleSize);
+            ShingledPoint s = new ShingledPoint(buffer, index - shingleSize, shingleSize);
             for (ShingledTree tree : trees) {
                 ShingledLeaf l = tree.insertPoint(s);
                 val += tree.getCollusiveDisplacement(l);
