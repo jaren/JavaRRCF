@@ -12,15 +12,15 @@ import java.io.Serializable;
  * - Doesn't store bounding boxes, only storing a delta at each branch (cut dim/value since bounding boxes only change by one item each time)
  */
 public class ShingledForest extends RCForest implements Serializable {
-    private int shingleSize;
     private int treeSize;
-    private MOShingledTree[] trees;
+    private ShingledTree[] trees;
+    private BoundedBuffer<Double> buffer;
 
     public ShingledForest(Random random, int shingleSize, int numTrees, int treeSize) {
-        this.shingleSize = shingleSize;
-        trees = new MOShingledTree[numTrees];
+        trees = new ShingledTree[numTrees];
+        buffer = new BoundedBuffer<>(shingleSize + treeSize);
         for (int i = 0; i < numTrees; i++) {
-            trees[i] = new MOShingledTree();
+            trees[i] = new ShingledTree(random, shingleSize);
         }
     }
 
@@ -28,13 +28,18 @@ public class ShingledForest extends RCForest implements Serializable {
         this(new Random(), shingleSize, numTrees, treeSize);
     }
 
+    /**
+     * Adds a point to the forest
+     * @param value
+     * @return Average collusive displacement from point insertion
+     */
     public double addPoint(double value) {
         buffer.addLast(value);
         if (buffer.size() <= shingleSize) {
             return 0;
         } else {
             buffer.removeFirst();
-            for (MOShingledTree tree : trees) {
+            for (ShingledTree tree : trees) {
                 tree.insertPoint(value);
             }
         }
