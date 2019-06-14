@@ -13,7 +13,7 @@ import java.io.Serializable;
  */
 public class SimpleShingledForest extends RCForest implements Serializable {
     private int shingleSize;
-    private Deque<Double> buffer;
+    private Deque<Float> buffer;
 
     public SimpleShingledForest(Random random, int shingleSize, int numTrees, int treeSize) {
         super(random, numTrees, treeSize);
@@ -25,18 +25,18 @@ public class SimpleShingledForest extends RCForest implements Serializable {
         this(new Random(), shingleSize, numTrees, treeSize);
     }
 
-    public double addPoint(double value) {
+    public float addPoint(float value) {
         buffer.addLast(value);
         if (buffer.size() <= shingleSize) {
             return 0;
         } else {
             buffer.removeFirst();
-            return super.addPoint(unboxArray(buffer.toArray(new Double[buffer.size()])));
+            return super.addPoint(unboxArray(buffer.toArray(new Float[buffer.size()])));
         }
     }
 
-    private double[] unboxArray(Double[] arr) {
-        double[] output = new double[arr.length];
+    private float[] unboxArray(Float[] arr) {
+        float[] output = new float[arr.length];
         for (int i = 0; i < arr.length; i++) {
             output[i] = arr[i];
         }
@@ -44,7 +44,7 @@ public class SimpleShingledForest extends RCForest implements Serializable {
     }
 
     @Override
-    public double addPoint(double[] value) {
+    public float addPoint(float[] value) {
         assert value.length == 1;
         return addPoint(value[0]);
     }

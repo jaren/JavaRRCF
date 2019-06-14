@@ -22,7 +22,7 @@ public class ShingleCsv {
         ShingledForest f = new ShingledForest(random, shingleSize, numTrees, treeSize);
         int i = 0;
         while (input.hasNextLine()) {
-            double val = Double.parseDouble(input.nextLine());
+            float val = Float.parseFloat(input.nextLine());
             System.out.printf("%d,%f,%f\n", i, val, f.addPoint(val));
             i++;
         }

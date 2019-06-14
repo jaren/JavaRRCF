@@ -179,9 +179,9 @@ public class ShingledTree implements Serializable {
         while (true) {
             // Update bounding boxes at each step down the tree
             // NOTE: VERY INEFFICIENT, SHOULD ONLY BE TEMPORARY
-            double[][] boundingBox = generateBoundingBox(node);
-            double[] minPoint = boundingBox[0];
-            double[] maxPoint = boundingBox[1];
+            float[][] boundingBox = generateBoundingBox(node);
+            float[] minPoint = boundingBox[0];
+            float[] maxPoint = boundingBox[1];
             Cut c = insertPointCut(point, minPoint, maxPoint);
             if (c.value <= minPoint[c.dim]) {
                 leaf = new ShingledLeaf(point);
@@ -249,11 +249,11 @@ public class ShingledTree implements Serializable {
      * Generates a bounding box for use on point insertion
      * WARNING: O(n) operation
      */
-    private double[][] generateBoundingBox(ShingledNode n) {
-        double[][] box = new double[2][dimension];
+    private float[][] generateBoundingBox(ShingledNode n) {
+        float[][] box = new float[2][dimension];
         for (int i = 0; i < dimension; i++) {
-            box[0][i] = Double.MAX_VALUE;
-            box[1][i] = Double.MIN_VALUE;
+            box[0][i] = Float.MAX_VALUE;
+            box[1][i] = Float.MIN_VALUE;
         }
         mapLeaves((leaf) -> {
             for (int i = 0; i < dimension; i++) {
@@ -328,13 +328,13 @@ public class ShingledTree implements Serializable {
     /**
      * Generates a random cut from the span of a point and bounding box
      */
-    private Cut insertPointCut(ShingledPoint point, double[] minBox, double[] maxBox) {
-        double[] newMinBox = new double[minBox.length];
-        double[] newMaxBox = new double[maxBox.length];
-        double[] span = new double[minBox.length];
+    private Cut insertPointCut(ShingledPoint point, float[] minBox, float[] maxBox) {
+        float[] newMinBox = new float[minBox.length];
+        float[] newMaxBox = new float[maxBox.length];
+        float[] span = new float[minBox.length];
         // Cumulative sum of span
         // TODO: Remove newMaxBox?
-        double[] spanSum = new double[minBox.length];
+        float[] spanSum = new float[minBox.length];
         for (int i = 0; i < dimension; i++) {
             newMinBox[i] = Math.min(minBox[i], point.get(i));
             newMaxBox[i] = Math.max(maxBox[i], point.get(i));
@@ -346,8 +346,8 @@ public class ShingledTree implements Serializable {
             }
         }
         // Weighted random with each dimension's span
-        double range = spanSum[spanSum.length - 1];
-        double r = random.nextDouble() * range;
+        float range = spanSum[spanSum.length - 1];
+        float r = random.nextFloat() * range;
         int cutDim = -1;
         for (int i = 0; i < dimension; i++) {
             // Finds first value greater or equal to chosen
@@ -357,7 +357,7 @@ public class ShingledTree implements Serializable {
             }
         }
         assert cutDim > -1;
-        double value = newMinBox[cutDim] + spanSum[cutDim] - r;
+        float value = newMinBox[cutDim] + spanSum[cutDim] - r;
         return new Cut(cutDim, value);
     }
 
@@ -368,9 +368,9 @@ public class ShingledTree implements Serializable {
         // Dimension of cut
         public int dim;
         // Value of cut
-        public double value;
+        public float value;
 
-        public Cut(int d, double v) {
+        public Cut(int d, float v) {
             dim = d;
             value = v;
         }

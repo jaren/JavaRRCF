@@ -15,7 +15,7 @@ import java.io.Serializable;
 public class ShingledForest implements Serializable {
     private int shingleSize;
     private ShingledTree[] trees;
-    private BoundedBuffer<Double> buffer;
+    private BoundedBuffer<Float> buffer;
 
     public ShingledForest(Random random, int shingleSize, int numTrees, int treeSize) {
         trees = new ShingledTree[numTrees];
@@ -36,7 +36,7 @@ public class ShingledForest implements Serializable {
      * @param value
      * @return Average collusive displacement from point insertion
      */
-    public double addPoint(double value) {
+    public float addPoint(float value) {
         if (buffer.size() < shingleSize) {
             buffer.add(value);
             return 0;
@@ -48,7 +48,7 @@ public class ShingledForest implements Serializable {
                 }
             }
             long index = buffer.add(value);
-            double val = 0;
+            float val = 0;
             ShingledPoint s = new ShingledPoint(buffer, index - shingleSize, shingleSize);
             for (ShingledTree tree : trees) {
                 ShingledLeaf l = tree.insertPoint(s);

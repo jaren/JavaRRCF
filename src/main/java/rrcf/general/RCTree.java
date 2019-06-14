@@ -169,7 +169,7 @@ public class RCTree implements Serializable {
     /**
      * Insert a point into the tree with a given index and create a new leaf
      */
-    public RCLeaf insertPoint(double[] point, Object index) {
+    public RCLeaf insertPoint(float[] point, Object index) {
         // If no points, set necessary variables
         if (root == null) {
             RCLeaf leaf = new RCLeaf(point, 0);
@@ -198,7 +198,7 @@ public class RCTree implements Serializable {
         boolean useLeftSide = false;
         // Traverse tree until insertion spot found
         for (int i = 0; i < size(); i++) {
-            double[][] bbox = node.point;
+            float[][] bbox = node.point;
             Cut c = insertPointCut(point, bbox);
             if (c.value <= bbox[0][c.dim]) {
                 leaf = new RCLeaf(point, i);
@@ -269,7 +269,7 @@ public class RCTree implements Serializable {
      * When a point is deleted, contract bounding box of nodes above point
      * If the deleted point was on the boundary for any dimension
      */
-    private void shrinkBoxUp(RCBranch node, double[] point) {
+    private void shrinkBoxUp(RCBranch node, float[] point) {
         while (node != null) {
             // Check if any of the current box's values match the point
             // Can exit otherwise, no shrinking necessary
@@ -291,7 +291,7 @@ public class RCTree implements Serializable {
      * When a point is inserted, expand bounding box of nodes above new point
      */
     private void expandBoxUp(RCBranch node) {
-        double[][] bbox = mergeChildrenBoxes(node);
+        float[][] bbox = mergeChildrenBoxes(node);
         node.point = bbox;
         node = node.parent;
         while (node != null) {
@@ -316,8 +316,8 @@ public class RCTree implements Serializable {
     /**
      * Get bounding box of branch based on its children
      */
-    private double[][] mergeChildrenBoxes(RCBranch node) {
-        double[][] box = new double[2][ndim];
+    private float[][] mergeChildrenBoxes(RCBranch node) {
+        float[][] box = new float[2][ndim];
         for (int i = 0; i < ndim; i++) {
             box[0][i] = Math.min(node.left.point[0][i], node.right.point[0][i]);
             box[1][i] = Math.max(node.left.point[node.left.point.length - 1][i],
@@ -338,14 +338,14 @@ public class RCTree implements Serializable {
     /**
      * Wrapper for query from root
      */
-    public RCLeaf query(double[] point) {
+    public RCLeaf query(float[] point) {
         return query(point, root);
     }
 
     /**
      * Finds the closest leaf to a point under a specified node
      */
-    private RCLeaf query(double[] point, RCNode n) {
+    private RCLeaf query(float[] point, RCNode n) {
         while (!(n instanceof RCLeaf)) {
             RCBranch b = (RCBranch) n;
             if (point[b.cut.dim] <= b.cut.value) {
@@ -418,7 +418,7 @@ public class RCTree implements Serializable {
     /**
      * Returns a leaf containing a point if it exists
      */
-    public RCLeaf findLeaf(double[] point) {
+    public RCLeaf findLeaf(float[] point) {
         RCLeaf nearest = query(point);
         if (nearest.point[0].equals(point)) {
             return nearest;
@@ -429,11 +429,11 @@ public class RCTree implements Serializable {
     /**
      * Generates a random cut from the span of a point and bounding box
      */
-    private Cut insertPointCut(double[] point, double[][] bbox) {
-        double[][] newBox = new double[bbox.length][bbox[0].length];
-        double[] span = new double[bbox[0].length];
+    private Cut insertPointCut(float[] point, float[][] bbox) {
+        float[][] newBox = new float[bbox.length][bbox[0].length];
+        float[] span = new float[bbox[0].length];
         // Cumulative sum of span
-        double[] spanSum = new double[bbox[0].length];
+        float[] spanSum = new float[bbox[0].length];
         for (int i = 0; i < ndim; i++) {
             newBox[0][i] = Math.min(bbox[0][i], point[i]);
             newBox[newBox.length - 1][i] = Math.max(bbox[bbox.length - 1][i], point[i]);
@@ -445,8 +445,8 @@ public class RCTree implements Serializable {
             }
         }
         // Weighted random with each dimension's span
-        double range = spanSum[spanSum.length - 1];
-        double r = random.nextDouble() * range;
+        float range = spanSum[spanSum.length - 1];
+        float r = random.nextFloat() * range;
         int dimension = -1;
         for (int i = 0; i < ndim; i++) {
             // Finds first value greater or equal to chosen
@@ -456,7 +456,7 @@ public class RCTree implements Serializable {
             }
         }
         assert dimension > -1;
-        double value = newBox[0][dimension] + spanSum[dimension] - r;
+        float value = newBox[0][dimension] + spanSum[dimension] - r;
         return new Cut(dimension, value);
     }
 
@@ -467,9 +467,9 @@ public class RCTree implements Serializable {
         // Dimension of cut
         public int dim;
         // Value of cut
-        public double value;
+        public float value;
 
-        public Cut(int d, double v) {
+        public Cut(int d, float v) {
             dim = d;
             value = v;
         }

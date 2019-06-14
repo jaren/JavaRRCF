@@ -5,10 +5,10 @@ package rrcf.memory;
  */
 public class ShingledPoint {
     private int size;
-    private BoundedBuffer<Double> buffer;
+    private BoundedBuffer<Float> buffer;
     private long startIndex;
 
-    public ShingledPoint(BoundedBuffer<Double> buffer, long startIndex, int size) {
+    public ShingledPoint(BoundedBuffer<Float> buffer, long startIndex, int size) {
         this.buffer = buffer;
         this.startIndex = startIndex;
         this.size = size;
@@ -18,15 +18,15 @@ public class ShingledPoint {
         return size;
     }
 
-    public double get(int index) {
+    public float get(int index) {
         if (index > size) {
             throw new ArrayIndexOutOfBoundsException("Invalid point access index");
         }
         return buffer.get(startIndex + index);
     }
 
-    public double[] toArray() {
-        double[] arr = new double[size];
+    public float[] toArray() {
+        float[] arr = new float[size];
         for (int i = 0; i < arr.length; i++) {
             arr[i] = get(i);
         }
