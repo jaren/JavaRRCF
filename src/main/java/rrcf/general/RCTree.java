@@ -200,7 +200,7 @@ public class RCTree implements Serializable {
         for (int i = 0; i < size(); i++) {
             float[][] bbox = node.point;
             Cut c = insertPointCut(point, bbox);
-            if (c.value <= bbox[0][c.dim]) {
+            if (c.value < bbox[0][c.dim]) {
                 leaf = new RCLeaf(point, i);
                 branch = new RCBranch(c, leaf, node, leaf.num + node.num);
                 break;

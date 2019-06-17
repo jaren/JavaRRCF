@@ -1,6 +1,7 @@
 package rrcf.memory;
 
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
@@ -56,7 +57,7 @@ public class ShingledTree implements Serializable {
         if (node instanceof ShingledLeaf) {
             depthAndTreeString[1] += String.format("(%s)\n", Arrays.toString(((ShingledLeaf)node).point.toArray()));
         } else if (node instanceof ShingledBranch) {
-            depthAndTreeString[1] += String.format("%c+\n", 9472);
+            depthAndTreeString[1] += String.format("%c+ (%d , %f)\n", 9472, ((ShingledBranch)node).cut.dim, ((ShingledBranch)node).cut.value);
             depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9500, 9472, 9472);
             ppush.accept((char) 9474);
             printNodeToString(((ShingledBranch) node).left, depthAndTreeString);
@@ -106,8 +107,12 @@ public class ShingledTree implements Serializable {
     /**
      * Delete a leaf (found from index) from the tree and return deleted node
      */
-    public ShingledLeaf forgetPoint(ShingledPoint point) {
+    public ShingledLeaf forgetPoint(ShingledPoint point) throws NoSuchElementException {
         ShingledLeaf leaf = findLeaf(point);
+        
+        if (leaf == null) {
+            throw new NoSuchElementException(String.format("Point not found: %s", Arrays.toString(point.toArray())));
+        }
 
         // If duplicate points exist, decrease num for all nodes above
         if (leaf.num > 1) {
@@ -183,7 +188,7 @@ public class ShingledTree implements Serializable {
             float[] minPoint = boundingBox[0];
             float[] maxPoint = boundingBox[1];
             Cut c = insertPointCut(point, minPoint, maxPoint);
-            if (c.value <= minPoint[c.dim]) {
+            if (c.value < minPoint[c.dim]) {
                 leaf = new ShingledLeaf(point);
                 branch = new ShingledBranch(c, leaf, node, leaf.num + node.num);
                 break;
