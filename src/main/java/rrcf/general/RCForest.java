@@ -25,8 +25,8 @@ public class RCForest implements Serializable {
         this(new Random(), numTrees, size);
     }
 
-    public float addPoint(float[] point) {
-        float accum = 0;
+    public double addPoint(double[] point) {
+        double accum = 0;
         for (RCTree t : trees) {
             if (t.size() > treeSize) {
                 t.forgetPoint(currentIndex - treeSize);

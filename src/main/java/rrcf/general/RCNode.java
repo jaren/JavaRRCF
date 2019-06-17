@@ -13,5 +13,5 @@ public class RCNode implements Serializable {
 
     // Represents either a bounding box (length 2) or point (length 1)
     // Representation depends on whether the node is a branch or leaf
-    public float[][] point;
+    public double[][] point;
 }
