@@ -10,7 +10,7 @@ import rrcf.memory.ShingledForest;
 public class TreeComparisonTest {
     @Test
     public void ComparisonTestForest() {
-        for (int i = 2; i < 100000; i=i*i) {
+        for (long i = 2; i < 10000000; i=i*i) {
             for (int numTrees = 1; numTrees < 100; numTrees += 9) {
                 for (int treeSize = 10; treeSize < 1000; treeSize += 100) {
                     for (int shingleSize = 2; shingleSize < 50; shingleSize += 10) {
@@ -30,6 +30,7 @@ public class TreeComparisonTest {
                             System.out.println("Actual:");
                             System.out.println(test1.trees[0].toString());
                             assertEquals(v2, v1, 0.000001);
+                            assertEquals(test2.trees[0].toString(), test1.trees[0].toString());
                         }
                     }
                 }

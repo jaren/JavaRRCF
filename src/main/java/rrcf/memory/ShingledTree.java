@@ -62,14 +62,15 @@ public class ShingledTree implements Serializable {
         if (node instanceof ShingledLeaf) {
             depthAndTreeString[1] += String.format("(%s)\n", Arrays.toString(((ShingledLeaf)node).point.toArray()));
         } else if (node instanceof ShingledBranch) {
-            depthAndTreeString[1] += String.format("%c+ (%d, %f)\n", 9472, ((ShingledBranch)node).cut.dim, ((ShingledBranch)node).cut.value);
+            ShingledBranch b = (ShingledBranch)node;
+            depthAndTreeString[1] += String.format("%c+ cut: (%d, %f), box: (%s, %s)\n", 9472, b.cut.dim, b.cut.value, Arrays.toString(b.mbb), Arrays.toString(b.ubb));
             depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9500, 9472, 9472);
             ppush.accept((char) 9474);
-            printNodeToString(((ShingledBranch) node).left, depthAndTreeString);
+            printNodeToString(b.left, depthAndTreeString);
             ppop.run();
             depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9492, 9472, 9472);
             ppush.accept(' ');
-            printNodeToString(((ShingledBranch) node).right, depthAndTreeString);
+            printNodeToString(b.right, depthAndTreeString);
             ppop.run();
         }
     }
@@ -151,6 +152,7 @@ public class ShingledTree implements Serializable {
             leaf.parent = null; // In case the returned node is used somehow
             root = sibling;
             // TODO: Handle bounding boxes here?
+            TEMPUPDATEBOXES();
             return leaf;
         }
 

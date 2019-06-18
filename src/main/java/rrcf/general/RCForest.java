@@ -29,7 +29,7 @@ public class RCForest implements Serializable {
     public double addPoint(double[] point) {
         double accum = 0;
         for (RCTree t : trees) {
-            if (t.size() > treeSize) {
+            if (t.size() >= treeSize) {
                 t.forgetPoint(currentIndex - treeSize);
             }
             t.insertPoint(point, currentIndex);
