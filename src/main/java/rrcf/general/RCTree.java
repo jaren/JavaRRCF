@@ -431,14 +431,14 @@ public class RCTree implements Serializable {
      * Generates a random cut from the span of a point and bounding box
      */
     private Cut insertPointCut(double[] point, double[][] bbox) {
-        double[][] newBox = new double[2][bbox[0].length];
+        double[] newMinBox = new double[bbox[0].length];
         double[] span = new double[bbox[0].length];
         // Cumulative sum of span
         double[] spanSum = new double[bbox[0].length];
         for (int i = 0; i < ndim; i++) {
-            newBox[0][i] = Math.min(bbox[0][i], point[i]);
-            newBox[newBox.length - 1][i] = Math.max(bbox[bbox.length - 1][i], point[i]);
-            span[i] =  newBox[newBox.length - 1][i] - newBox[0][i];
+            newMinBox[i] = Math.min(bbox[0][i], point[i]);
+            double maxI = Math.max(bbox[bbox.length - 1][i], point[i]);
+            span[i] =  maxI - newMinBox[i];
             if (i > 0) {
                 spanSum[i] = spanSum[i - 1] + span[i];
             } else {
@@ -457,7 +457,7 @@ public class RCTree implements Serializable {
             }
         }
         assert dimension > -1;
-        double value = newBox[0][dimension] + spanSum[dimension] - r;
+        double value = newMinBox[dimension] + spanSum[dimension] - r;
         return new Cut(dimension, value);
     }
 

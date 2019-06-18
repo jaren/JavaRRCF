@@ -22,9 +22,10 @@ import java.io.Serializable;
  */
 public class ShingledTree implements Serializable {
     // TODO: Test with leaves map / array instead of getting leaves at runtime
-    // TODO: Replace with floats again, find a way around imprecision
     // TODO: Do we have to considern the tri state thing?
-    // TODO: Replace min/max determined with single thing
+    // TODO: Replace min/max determined with single array and bitset
+    // TODO: Collapse unnecessary classes (shingledpoint) into nodes, don't store unnecessary references
+    // TODO: Replace with floats again, find a way around imprecision
     private ShingledNode root;
     private int dimension;
     private Random random;
@@ -446,15 +447,13 @@ public class ShingledTree implements Serializable {
      */
     private Cut insertPointCut(ShingledPoint point, double[] minBox, double[] maxBox) {
         double[] newMinBox = new double[minBox.length];
-        double[] newMaxBox = new double[maxBox.length];
         double[] span = new double[minBox.length];
         // Cumulative sum of span
-        // TODO: Remove newMaxBox?
         double[] spanSum = new double[minBox.length];
         for (int i = 0; i < dimension; i++) {
             newMinBox[i] = Math.min(minBox[i], point.get(i));
-            newMaxBox[i] = Math.max(maxBox[i], point.get(i));
-            span[i] = newMaxBox[i] - newMinBox[i];
+            double maxI = Math.max(maxBox[i], point.get(i));
+            span[i] = maxI - newMinBox[i];
             if (i > 0) {
                 spanSum[i] = spanSum[i - 1] + span[i];
             } else {
