@@ -62,7 +62,7 @@ public class ShingledTree implements Serializable {
         if (node instanceof ShingledLeaf) {
             depthAndTreeString[1] += String.format("(%s)\n", Arrays.toString(((ShingledLeaf)node).point.toArray()));
         } else if (node instanceof ShingledBranch) {
-            depthAndTreeString[1] += String.format("%c+ (%d , %f)\n", 9472, ((ShingledBranch)node).cut.dim, ((ShingledBranch)node).cut.value);
+            depthAndTreeString[1] += String.format("%c+ (%d, %f)\n", 9472, ((ShingledBranch)node).cut.dim, ((ShingledBranch)node).cut.value);
             depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9500, 9472, 9472);
             ppush.accept((char) 9474);
             printNodeToString(((ShingledBranch) node).left, depthAndTreeString);
@@ -271,6 +271,8 @@ public class ShingledTree implements Serializable {
      * WARNING: Worst case O(n)
      */
     private void shrinkBoxUpwards(ShingledLeaf leaf) {
+        // TODO: Replace with semi-efficient algorithm, for now just placeholder
+        /*
         // The bits of parent which are determined by the child
         BitSet minDetermined = (BitSet)leaf.parent.childMinPointDirections.clone();
         BitSet maxDetermined = (BitSet)leaf.parent.childMaxPointDirections.clone();
@@ -296,6 +298,8 @@ public class ShingledTree implements Serializable {
             }
             node = node.parent;
         }
+        */
+        TEMPUPDATEBOXES();
     }
 
     /**
@@ -304,7 +308,57 @@ public class ShingledTree implements Serializable {
      * WARNING: Worst case O(n)
      */
     private void expandBoxUpwards(ShingledNode node) {
+        // TODO: Replace with semi-efficient algorithm, for now just a placeholder
+        TEMPUPDATEBOXES();
+    }
 
+    private void TEMPUPDATEBOXES() {
+        TEMPPOPULATEBB(root);
+        minBox = root.mbb;
+        maxBox = root.ubb;
+
+        mapBranches((branch) -> {
+            branch.childMinPointDirections = new BitSet();
+            branch.childMinPointValues = new double[dimension];
+            branch.childMaxPointDirections = new BitSet();
+            branch.childMaxPointValues = new double[dimension];
+            for (int i = 0; i < dimension; i++) {
+                if (branch.left.mbb[i] == branch.mbb[i]) {
+                    branch.childMinPointDirections.clear(i);
+                    branch.childMinPointValues[i] = branch.right.mbb[i];
+                } else {
+                    branch.childMinPointDirections.set(i);
+                    branch.childMinPointValues[i] = branch.left.mbb[i];
+                }
+
+                if (branch.left.ubb[i] == branch.ubb[i]) {
+                    branch.childMaxPointDirections.clear(i);
+                    branch.childMaxPointValues[i] = branch.right.ubb[i];
+                } else {
+                    branch.childMaxPointDirections.set(i);
+                    branch.childMaxPointValues[i] = branch.left.ubb[i];
+                }
+            }
+        });
+    }
+
+    private void TEMPPOPULATEBB(ShingledNode n) {
+        n.mbb = new double[dimension];
+        n.ubb = new double[dimension];
+        if (n instanceof ShingledLeaf) {
+            for (int i = 0; i < dimension; i++) {
+                n.mbb[i] = ((ShingledLeaf)n).point.get(i);
+                n.ubb[i] = ((ShingledLeaf)n).point.get(i);
+            }
+        } else {
+            ShingledBranch b = (ShingledBranch) n;
+            TEMPPOPULATEBB(b.left);
+            TEMPPOPULATEBB(b.right);
+            for (int i = 0; i < dimension; i++) {
+                b.mbb[i] = Math.min(b.left.mbb[i], b.right.mbb[i]);
+                b.ubb[i] = Math.max(b.left.ubb[i], b.right.ubb[i]);
+            }
+        }
     }
 
     /**

@@ -14,7 +14,8 @@ import java.io.Serializable;
  */
 public class ShingledForest implements Serializable {
     private int shingleSize;
-    private ShingledTree[] trees;
+    // TODO: Change to private
+    public ShingledTree[] trees;
     private BoundedBuffer<Double> buffer;
 
     public ShingledForest(Random random, int shingleSize, int numTrees, int treeSize) {
@@ -37,24 +38,22 @@ public class ShingledForest implements Serializable {
      * @return Average collusive displacement from point insertion
      */
     public double addPoint(double value) {
-        if (buffer.size() < shingleSize) {
-            buffer.add(value);
-            return 0;
-        } else {
-            if (buffer.full()) {
-                ShingledPoint oldestPoint = new ShingledPoint(buffer, buffer.streamStartIndex(), shingleSize);
-                for (ShingledTree tree : trees) {
-                    tree.forgetPoint(oldestPoint);
-                }
-            }
-            long index = buffer.add(value);
-            double val = 0;
-            ShingledPoint s = new ShingledPoint(buffer, index - shingleSize, shingleSize);
+        if (buffer.full()) {
+            ShingledPoint oldestPoint = new ShingledPoint(buffer, buffer.streamStartIndex(), shingleSize);
             for (ShingledTree tree : trees) {
-                ShingledLeaf l = tree.insertPoint(s);
-                val += tree.getCollusiveDisplacement(l);
+                tree.forgetPoint(oldestPoint);
             }
-            return val / trees.length;
         }
+        long index = buffer.add(value);
+        double val = 0;
+        if (buffer.size() < shingleSize) {
+            return 0;
+        }
+        ShingledPoint s = new ShingledPoint(buffer, index - shingleSize + 1, shingleSize);
+        for (ShingledTree tree : trees) {
+            ShingledLeaf l = tree.insertPoint(s);
+            val += tree.getCollusiveDisplacement(l);
+        }
+        return val / trees.length;
     }
 }

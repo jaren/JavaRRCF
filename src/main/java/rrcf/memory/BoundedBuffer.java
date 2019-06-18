@@ -43,6 +43,9 @@ public class BoundedBuffer<T> {
         if (adjustedIndex > size) {
             throw new ArrayIndexOutOfBoundsException("Element out of bounds of buffer");
         }
+        if (index < 0) {
+            throw new ArrayIndexOutOfBoundsException("Invalid index");
+        }
         if (adjustedIndex < 0) {
             throw new ArrayIndexOutOfBoundsException("Element already removed from buffer");
         }

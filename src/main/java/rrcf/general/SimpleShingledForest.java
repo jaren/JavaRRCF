@@ -27,10 +27,12 @@ public class SimpleShingledForest extends RCForest implements Serializable {
 
     public double addPoint(double value) {
         buffer.addLast(value);
-        if (buffer.size() <= shingleSize) {
+        if (buffer.size() < shingleSize) {
             return 0;
         } else {
-            buffer.removeFirst();
+            if (buffer.size() > shingleSize) {
+                buffer.removeFirst();
+            }
             return super.addPoint(unboxArray(buffer.toArray(new Double[buffer.size()])));
         }
     }

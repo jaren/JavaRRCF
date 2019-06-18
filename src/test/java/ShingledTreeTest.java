@@ -1,3 +1,4 @@
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
@@ -25,11 +26,12 @@ public class ShingledTreeTest {
         // 5, 6, 7
         // 6, 7, 8
         // ...
-        assertEquals(new double[] { 0, 1, 2 }, tree.getMinBox());
-        assertEquals(new double[] { 97, 98, 99 }, tree.getMaxBox());
+        double delta = 0.00000001;
+        assertArrayEquals(new double[] { 0, 1, 2 }, tree.getMinBox(), delta);
+        assertArrayEquals(new double[] { 97, 98, 99 }, tree.getMaxBox(), delta);
         tree.forgetPoint(new ShingledPoint(b, 0, 3));
-        assertEquals(new double[] { 1, 2, 3 }, tree.getMinBox());
-        assertEquals(new double[] { 97, 98, 99 }, tree.getMaxBox());
+        assertArrayEquals(new double[] { 1, 2, 3 }, tree.getMinBox(), delta);
+        assertArrayEquals(new double[] { 97, 98, 99 }, tree.getMaxBox(), delta);
     }
 
     @Test
