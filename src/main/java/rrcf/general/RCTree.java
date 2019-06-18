@@ -68,7 +68,7 @@ public class RCTree implements Serializable {
         if (node instanceof RCLeaf) {
             depthAndTreeString[1] += String.format("(%s)\n", Arrays.toString(node.point));
         } else if (node instanceof RCBranch) {
-            depthAndTreeString[1] += String.format("%c+\n", 9472);
+            depthAndTreeString[1] += String.format("%c+ (%d , %f)\n", 9472, ((RCBranch)node).cut.dim, ((RCBranch)node).cut.value);
             depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9500, 9472, 9472);
             ppush.accept((char) 9474);
             printNodeToString(((RCBranch) node).left, depthAndTreeString);
