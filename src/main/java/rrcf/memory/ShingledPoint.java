@@ -1,5 +1,7 @@
 package rrcf.memory;
 
+import java.util.Arrays;
+
 /**
  * Represents a shingled point stored in a BoundedBuffer
  */
@@ -31,6 +33,11 @@ public class ShingledPoint {
             arr[i] = get(i);
         }
         return arr;
+    }
+
+    @Override
+    public String toString() {
+        return Arrays.toString(toArray());
     }
 
     @Override
