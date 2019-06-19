@@ -15,10 +15,15 @@ public class ShingledBranch extends ShingledNode {
     public BitSet childMinPointDirections;
     public BitSet childMaxPointDirections;
 
-    public ShingledBranch(Cut c, ShingledNode l, ShingledNode r, int n) {
+    public ShingledBranch(Cut c, int dimension, ShingledNode l, ShingledNode r, int n) {
         cut = c;
         left = l;
         right = r;
         num = n;
+
+        childMinPointValues = new double[dimension];
+        childMaxPointValues = new double[dimension];
+        childMinPointDirections = new BitSet();
+        childMaxPointDirections = new BitSet();
     }
 }

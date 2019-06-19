@@ -35,6 +35,8 @@ public class ShingledTree implements Serializable {
     public ShingledTree(Random r, int shingleSize) {
         random = r;
         dimension = shingleSize;
+        minBox = null;
+        maxBox = null;
     }
 
     public ShingledTree(int shingleSize) {
@@ -44,7 +46,10 @@ public class ShingledTree implements Serializable {
     @Override
     public String toString() {
         String[] depthAndTreeString = { "", "" };
-        printNodeToString(root, depthAndTreeString);
+        if (root == null) return "";
+        double[] currentMinBox = minBox.clone();
+        double[] currentMaxBox = maxBox.clone();
+        printNodeToString(root, depthAndTreeString, currentMinBox, currentMaxBox);
         return depthAndTreeString[1];
     }
 
@@ -52,7 +57,7 @@ public class ShingledTree implements Serializable {
      * Prints a node to provided string
      * Updates the given string array: { depth, tree } strings
      */
-    private void printNodeToString(ShingledNode node, String[] depthAndTreeString) {
+    private void printNodeToString(ShingledNode node, String[] depthAndTreeString, double[] currentMinBox, double[] currentMaxBox) {
         Consumer<Character> ppush = (c) -> {
             String branch = String.format(" %c  ", c);
             depthAndTreeString[0] += branch;
@@ -64,14 +69,32 @@ public class ShingledTree implements Serializable {
             depthAndTreeString[1] += String.format("(%s)\n", Arrays.toString(((ShingledLeaf)node).point.toArray()));
         } else if (node instanceof ShingledBranch) {
             ShingledBranch b = (ShingledBranch)node;
-            depthAndTreeString[1] += String.format("%c+ cut: (%d, %f), box: (%s, %s)\n", 9472, b.cut.dim, b.cut.value, Arrays.toString(b.mbb), Arrays.toString(b.ubb));
+            double[] leftMinBox = currentMinBox.clone();
+            double[] leftMaxBox = currentMaxBox.clone();
+            double[] rightMinBox = currentMinBox.clone();
+            double[] rightMaxBox = currentMaxBox.clone();
+            for (int i = 0; i < dimension; i++) {
+                // TODO: Extract to function
+                if (b.childMinPointDirections.get(i)) {
+                    leftMinBox[i] = b.childMinPointValues[i];
+                } else {
+                    rightMinBox[i] = b.childMinPointValues[i];
+                }
+
+                if (b.childMaxPointDirections.get(i)) {
+                    leftMaxBox[i] = b.childMaxPointValues[i];
+                } else {
+                    rightMaxBox[i] = b.childMaxPointValues[i];
+                }
+            }
+            depthAndTreeString[1] += String.format("%c+ cut: (%d, %f), box: (%s, %s)\n", 9472, b.cut.dim, b.cut.value, Arrays.toString(currentMinBox), Arrays.toString(currentMaxBox));
             depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9500, 9472, 9472);
             ppush.accept((char) 9474);
-            printNodeToString(b.left, depthAndTreeString);
+            printNodeToString(b.left, depthAndTreeString, leftMinBox, leftMaxBox);
             ppop.run();
             depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9492, 9472, 9472);
             ppush.accept(' ');
-            printNodeToString(b.right, depthAndTreeString);
+            printNodeToString(b.right, depthAndTreeString, rightMinBox, rightMaxBox);
             ppop.run();
         }
     }
@@ -152,8 +175,8 @@ public class ShingledTree implements Serializable {
             sibling.parent = null;
             leaf.parent = null; // In case the returned node is used somehow
             root = sibling;
-            // TODO: Handle bounding boxes here?
-            TEMPUPDATEBOXES();
+            // TODO: Handle bounding boxes here? <-- Don't think this is necessary
+            shrinkBoxUpwards(leaf);
             return leaf;
         }
 
@@ -212,12 +235,12 @@ public class ShingledTree implements Serializable {
             // Equal would make node go to the right, excluding some points from query
             if (c.value < minPoint[c.dim]) {
                 leaf = new ShingledLeaf(point);
-                branch = new ShingledBranch(c, leaf, node, leaf.num + node.num);
+                branch = new ShingledBranch(c, dimension, leaf, node, leaf.num + node.num);
                 break;
             // Shouldn't result in going down too far because dimensions with 0 variance have a 0 probability of being chosen?
             } else if (c.value >= maxPoint[c.dim] && point.get(c.dim) > c.value) {
                 leaf = new ShingledLeaf(point);
-                branch = new ShingledBranch(c, node, leaf, leaf.num + node.num);
+                branch = new ShingledBranch(c, dimension, node, leaf, leaf.num + node.num);
                 break;
             } else {
                 ShingledBranch b = (ShingledBranch) node;
@@ -258,7 +281,30 @@ public class ShingledTree implements Serializable {
             }
         } else {
             root = branch;
-            // TODO: Handle box here?
+            // Root has to have been set before so we don't need to recreate minBox, maxBox
+            // TODO: Extract to function
+            for (int i = 0; i < dimension; i++) {
+                // Update min values
+                minBox[i] = Math.min(minBox[i], leaf.point.get(i));
+                // If (is on left side) is same as (is equal to minimum)
+                // Set the direction to point right
+                if (leaf.equals(branch.left) == (leaf.point.get(i) == minBox[i])) {
+                    branch.childMinPointDirections.clear(i);
+                } else {
+                    branch.childMinPointDirections.set(i);
+                }
+                branch.childMinPointValues[i] = Math.max(minBox[i], leaf.point.get(i));
+
+                // Update max values
+                maxBox[i] = Math.max(maxBox[i], leaf.point.get(i));
+                // Same as before, but for maximum
+                if (leaf.equals(branch.left) == (leaf.point.get(i) == maxBox[i])) {
+                    branch.childMaxPointDirections.clear(i);
+                } else {
+                    branch.childMaxPointDirections.set(i);
+                }
+                branch.childMaxPointValues[i] = Math.min(minBox[i], leaf.point.get(i));
+            }
         }
 
         // Increase leaf counts
@@ -274,8 +320,8 @@ public class ShingledTree implements Serializable {
      * WARNING: Worst case O(n)
      */
     private void shrinkBoxUpwards(ShingledLeaf leaf) {
-        // TODO: Replace with semi-efficient algorithm, for now just placeholder
-        /*
+        TEMPUPDATEBOXES();
+        if (true) return;
         // The bits of parent which are determined by the child
         BitSet minDetermined = (BitSet)leaf.parent.childMinPointDirections.clone();
         BitSet maxDetermined = (BitSet)leaf.parent.childMaxPointDirections.clone();
@@ -301,8 +347,6 @@ public class ShingledTree implements Serializable {
             }
             node = node.parent;
         }
-        */
-        TEMPUPDATEBOXES();
     }
 
     /**
@@ -321,10 +365,6 @@ public class ShingledTree implements Serializable {
         maxBox = root.ubb;
 
         mapBranches((branch) -> {
-            branch.childMinPointDirections = new BitSet();
-            branch.childMinPointValues = new double[dimension];
-            branch.childMaxPointDirections = new BitSet();
-            branch.childMaxPointValues = new double[dimension];
             for (int i = 0; i < dimension; i++) {
                 if (branch.left.mbb[i] == branch.mbb[i]) {
                     branch.childMinPointDirections.clear(i);

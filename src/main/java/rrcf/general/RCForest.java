@@ -8,7 +8,7 @@ import java.util.Random;
  * Handles point addition and score averaging
  */
 public class RCForest implements Serializable {
-    // TODO: Change to public
+    // TODO: Change to private
     public RCTree[] trees;
     private int treeSize;
     private int currentIndex;
