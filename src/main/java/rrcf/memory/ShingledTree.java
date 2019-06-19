@@ -317,10 +317,10 @@ public class ShingledTree implements Serializable {
     /**
      * Shrinks the box up the tree, starting from a node
      * Expected to be called on removal with the removed leaf
-     * WARNING: Worst case O(n)
+     * WARNING: Worst case linear
      */
     private void shrinkBoxUpwards(ShingledLeaf leaf) {
-        // Temporary, this function is incomplete
+        // TEMPORARY
         TEMPUPDATEBOXES();
         if (true) return;
         // The bits of parent's bounding box which are determined by the child
@@ -335,10 +335,36 @@ public class ShingledTree implements Serializable {
             maxDetermined.flip(0, dimension);
         }
         ShingledNode node = leaf;
+        double[] altMins = new double[dimension];
+        double[] altMaxes = new double[dimension];
 		while (!minDetermined.isEmpty() || !maxDetermined.isEmpty()) {
             // For the bits that are determined, get their values from the other child
             // TODO: Replace with more efficient algorithm
+            // Can go up to root or down to leaves?
+            ShingledNode tempN = node;
             mapLeaves((l) -> {
+                for (int i = minDetermined.nextSetBit(0); i != -1; i = minDetermined.nextSetBit(i)) {
+                    if (l.point.get(i) < altMins[i]) {
+                        if (tempN.equals(tempN.parent.left)) {
+                            tempN.parent.childMinPointDirections.set(i);
+                        } else {
+                            tempN.parent.childMinPointDirections.clear(i);
+                        }
+                        tempN.parent.childMinPointValues[i] = altMins[i];
+                        altMins[i] = l.point.get(i);
+                    }
+                }
+                for (int i = maxDetermined.nextSetBit(0); i != -1; i = maxDetermined.nextSetBit(i)) {
+                    if (l.point.get(i) > altMaxes[i]) {
+                        if (tempN.equals(tempN.parent.left)) {
+                            tempN.parent.childMaxPointDirections.set(i);
+                        } else {
+                            tempN.parent.childMaxPointDirections.clear(i);
+                        }
+                        tempN.parent.childMaxPointValues[i] = altMaxes[i];
+                        altMaxes[i] = l.point.get(i);
+                    }
+                }
             }, getSibling(node));
 
             // Update the determined bits with parent
@@ -358,6 +384,9 @@ public class ShingledTree implements Serializable {
      * Called on insertion
      */
     private void expandBoxDownwards(ShingledLeaf leaf) {
+        // Temporary, to isolate shrinking box testing
+        TEMPUPDATEBOXES();
+        if (true) return;
         // Finds the path to root
         BitSet path = new BitSet();
         int pathIndex = 0;
