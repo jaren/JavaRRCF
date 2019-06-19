@@ -382,22 +382,10 @@ public class ShingledTree implements Serializable {
             }
         }
 
-        // Go down path from root
+        // Traverse tree from root to leaf
         // Assumes root is a branch
         ShingledBranch current = (ShingledBranch)root;
         for (int currI = pathIndex; currI >= 0; currI--) {
-            // If point < minBox or point > maxBox, update determined boxes for sibling of path
-            // Follow the path in reverse to leaf
-            // Update current bounding boxes along the way
-            BitSet minDir = (BitSet)current.childMinPointDirections.clone();
-            BitSet maxDir = (BitSet)current.childMaxPointDirections.clone();
-            if (path.get(currI)) {
-                current = (ShingledBranch)current.left;
-            } else {
-                current = (ShingledBranch)current.right;
-                minDir.flip(0, dimension);
-                maxDir.flip(0, dimension);
-            }
             for (int i = 0; i < dimension; i++) {
                 // If the path lies on the same side as the min point direction
                 // Update the value and direction
@@ -417,12 +405,29 @@ public class ShingledTree implements Serializable {
                 }
             }
 
-            // Update current boxes
+            // Get min and max dirs to update boxes
+            BitSet minDir = (BitSet)current.childMinPointDirections.clone();
+            BitSet maxDir = (BitSet)current.childMaxPointDirections.clone();
+            if (!path.get(currI)) {
+                minDir.flip(0, dimension);
+                maxDir.flip(0, dimension);
+            }
+            // Update current bounding boxes along the way
             for (int i = minDir.nextSetBit(0); i != -1; i = minDir.nextSetBit(i)) {
                 currentMinBox[i] = current.childMinPointValues[i];
             }
             for (int i = maxDir.nextSetBit(0); i != -1; i = maxDir.nextSetBit(i)) {
                 currentMaxBox[i] = current.childMaxPointValues[i];
+            }
+
+            // If not at stopping point (where left or right aren't branches)
+            // Continue down tree
+            if (currI > 0) {
+                if (path.get(currI)) {
+                    current = (ShingledBranch)current.left;
+                } else {
+                    current = (ShingledBranch)current.right;
+                }
             }
         }
     }
