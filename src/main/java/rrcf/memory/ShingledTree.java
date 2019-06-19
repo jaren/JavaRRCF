@@ -310,7 +310,7 @@ public class ShingledTree implements Serializable {
         // Increase leaf counts
         updateLeafCountUpwards(parent, 1);
         // Expand box up
-        expandBoxUpwards(node);
+        expandBoxDownwards(leaf);
         return leaf;
     }
 
@@ -320,12 +320,16 @@ public class ShingledTree implements Serializable {
      * WARNING: Worst case O(n)
      */
     private void shrinkBoxUpwards(ShingledLeaf leaf) {
+        // Temporary, this function is incomplete
         TEMPUPDATEBOXES();
         if (true) return;
-        // The bits of parent which are determined by the child
+        // The bits of parent's bounding box which are determined by the child
+        // --> Whether or not the leaf forms the edge of the bounding box 
         BitSet minDetermined = (BitSet)leaf.parent.childMinPointDirections.clone();
         BitSet maxDetermined = (BitSet)leaf.parent.childMaxPointDirections.clone();
         // {x}Determined is the inverse of {x}PointDirections
+        // If left, flip
+        // If right, it's already flipped
         if (leaf.equals(leaf.parent.left)) {
             minDetermined.flip(0, dimension);
             maxDetermined.flip(0, dimension);
@@ -352,11 +356,75 @@ public class ShingledTree implements Serializable {
     /**
      * Grows the box up the tree, starting from a node
      * Called on insertion
-     * WARNING: Worst case O(n)
      */
-    private void expandBoxUpwards(ShingledNode node) {
-        // TODO: Replace with semi-efficient algorithm, for now just a placeholder
-        TEMPUPDATEBOXES();
+    private void expandBoxDownwards(ShingledLeaf leaf) {
+        // Finds the path to root
+        BitSet path = new BitSet();
+        int pathIndex = 0;
+        for (ShingledNode n = leaf; n.parent != null; n = n.parent) {
+            if (n.equals(n.parent.left)) {
+                path.set(pathIndex);
+            }
+            pathIndex++;
+        }
+
+        // Sets current boxes to old values
+        double[] currentMinBox = minBox.clone();
+        double[] currentMaxBox = maxBox.clone();
+
+        // Update main bounding box
+        for (int i = 0; i < dimension; i++) {
+            if (leaf.point.get(i) < minBox[i]) {
+                minBox[i] = leaf.point.get(i);
+            }
+            if (leaf.point.get(i) > maxBox[i]) {
+                maxBox[i] = leaf.point.get(i);
+            }
+        }
+
+        // Go down path from root
+        // Assumes root is a branch
+        ShingledBranch current = (ShingledBranch)root;
+        for (int currI = pathIndex; currI >= 0; currI--) {
+            // If point < minBox or point > maxBox, update determined boxes for sibling of path
+            // Follow the path in reverse to leaf
+            // Update current bounding boxes along the way
+            BitSet minDir = (BitSet)current.childMinPointDirections.clone();
+            BitSet maxDir = (BitSet)current.childMaxPointDirections.clone();
+            if (path.get(currI)) {
+                current = (ShingledBranch)current.left;
+            } else {
+                current = (ShingledBranch)current.right;
+                minDir.flip(0, dimension);
+                maxDir.flip(0, dimension);
+            }
+            for (int i = 0; i < dimension; i++) {
+                // If the path lies on the same side as the min point direction
+                // Update the value and direction
+                // Otherwise nothing needs to be done
+                if (leaf.point.get(i) < currentMinBox[i]) {
+                    if (path.get(currI) == current.childMinPointDirections.get(i)) {
+                        current.childMinPointDirections.flip(i);
+                        current.childMinPointValues[i] = currentMinBox[i];
+                    }
+                }
+                // Same for max box
+                if (leaf.point.get(i) > currentMaxBox[i]) {
+                    if (path.get(currI) == current.childMaxPointDirections.get(i)) {
+                        current.childMaxPointDirections.flip(i);
+                        current.childMaxPointValues[i] = currentMaxBox[i];
+                    }
+                }
+            }
+
+            // Update current boxes
+            for (int i = minDir.nextSetBit(0); i != -1; i = minDir.nextSetBit(i)) {
+                currentMinBox[i] = current.childMinPointValues[i];
+            }
+            for (int i = maxDir.nextSetBit(0); i != -1; i = maxDir.nextSetBit(i)) {
+                currentMaxBox[i] = current.childMaxPointValues[i];
+            }
+        }
     }
 
     private void TEMPUPDATEBOXES() {
