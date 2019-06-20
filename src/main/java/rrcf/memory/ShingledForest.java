@@ -24,7 +24,7 @@ public class ShingledForest implements Serializable {
         buffer = new BoundedBuffer<>(shingleSize + treeSize - 1);
         this.shingleSize = shingleSize;
         for (int i = 0; i < numTrees; i++) {
-            trees[i] = new ShingledTree(random, buffer, shingleSize);
+            trees[i] = new ShingledTree(random, shingleSize);
         }
     }
 
@@ -39,7 +39,7 @@ public class ShingledForest implements Serializable {
      */
     public double addPoint(double value) {
         if (buffer.full()) {
-            long oldestPoint = buffer.streamStartIndex();
+            ShingledPoint oldestPoint = new ShingledPoint(buffer, buffer.streamStartIndex(), shingleSize);
             for (ShingledTree tree : trees) {
                 tree.forgetPoint(oldestPoint);
             }
@@ -49,9 +49,9 @@ public class ShingledForest implements Serializable {
         if (buffer.size() < shingleSize) {
             return 0;
         }
-        long startIndex = index - shingleSize + 1;
+        ShingledPoint s = new ShingledPoint(buffer, index - shingleSize + 1, shingleSize);
         for (ShingledTree tree : trees) {
-            ShingledLeaf l = tree.insertPoint(startIndex);
+            ShingledLeaf l = tree.insertPoint(s);
             val += tree.getCollusiveDisplacement(l);
         }
         return val / trees.length;

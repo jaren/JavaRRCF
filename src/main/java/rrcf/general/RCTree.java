@@ -1,7 +1,6 @@
 package rrcf.general;
 
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
@@ -122,10 +121,6 @@ public class RCTree implements Serializable {
      */
     public RCNode forgetPoint(Object index) {
         RCNode leaf = leavesMap.get(index);
-
-        if (leaf == null) {
-            throw new NoSuchElementException("Point not found");
-        }
 
         // If duplicate points exist, decrease num for all nodes above
         if (leaf.num > 1) {

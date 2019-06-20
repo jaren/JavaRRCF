@@ -14,6 +14,7 @@ import rrcf.general.RCTree;
 import rrcf.general.SimpleShingledForest;
 import rrcf.memory.BoundedBuffer;
 import rrcf.memory.ShingledForest;
+import rrcf.memory.ShingledPoint;
 import rrcf.memory.ShingledTree;
 
 public class TreeComparisonTest {
@@ -58,32 +59,30 @@ public class TreeComparisonTest {
         int shingleSize = rTest.nextInt(5) + 2;
         int iters = rTest.nextInt(1000) + 100;
         int maxTreeSize = rTest.nextInt(10) + 10;
-        BoundedBuffer<Double> b = new BoundedBuffer<>(shingleSize * iters);
-        ShingledTree testUnknown = new ShingledTree(new Random(randomSeed), b, shingleSize);
+        ShingledTree testUnknown = new ShingledTree(new Random(randomSeed), shingleSize);
         RCTree testVerify = new RCTree(new Random(randomSeed));
-        Set<Integer> points = new HashSet<>();
+        Map<Integer, ShingledPoint> points = new HashMap<>();
         // Technically not using shingling for points
         for (int i = 0; i < iters; i++) {
             System.out.printf("Iteration %d\n", i);
             if (!points.isEmpty() && (rTest.nextDouble() > 0.8 || testVerify.size() > maxTreeSize)) {
-                Object[] keys = points.toArray();
+                Object[] keys = points.keySet().toArray();
                 Integer k = (Integer)keys[rTest.nextInt(keys.length)];
-                System.out.printf("Removing %d\n", k);
-                testUnknown.forgetPoint(k);
+                System.out.printf("Removing %s\n", Arrays.toString(points.get(k).toArray()));
+                testUnknown.forgetPoint(points.get(k));
                 testVerify.forgetPoint(k);
                 points.remove(k);
             } else {
-                long start = b.streamStartIndex() + b.size();
-                double[] fullPoint = new double[shingleSize];
+                BoundedBuffer<Double> b = new BoundedBuffer<>(shingleSize);
                 for (int d = 0; d < shingleSize; d++) {
                     double val = rTest.nextInt(10000);
                     b.add(val);
-                    fullPoint[d] = val;
                 }
-                System.out.printf("Inserting %d\n", start);
-                points.add((int)start);
-                testVerify.insertPoint(fullPoint, (int)start);
-                testUnknown.insertPoint(start);
+                ShingledPoint s = new ShingledPoint(b, 0, shingleSize);
+                System.out.printf("Inserting %s\n", Arrays.toString(s.toArray()));
+                points.put(i, s);
+                testVerify.insertPoint(s.toArray(), i);
+                testUnknown.insertPoint(s);
             }
             System.out.println("Expected:");
             System.out.println(testVerify.toString());

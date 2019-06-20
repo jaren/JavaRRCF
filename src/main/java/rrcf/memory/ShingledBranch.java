@@ -9,10 +9,6 @@ public class ShingledBranch extends ShingledNode {
     public ShingledNode left;
     public ShingledNode right;
 
-    // Only stores half of the bounding box at each step
-    // The other half is inherited from its parent
-    // Each min / max value in each dimension is guaranteed to be shared with either left or right
-    // Only the bounding values for the node not containing the min / max is stored
     public double[] childMinPointValues;
     public double[] childMaxPointValues;
     // Where the point values in the double array go (true = left, false = right)
