@@ -22,11 +22,13 @@ import java.io.Serializable;
  */
 public class ShingledTree implements Serializable {
     // TODO: Test with leaves map / array instead of getting leaves at runtime
-    // TODO: Do we have to considern the tri state thing?
+    // TODO: Do we have to consider the tri state thing?
     // TODO: Replace min/max determined with single array and bitset
     // TODO: Collapse unnecessary classes (shingledpoint) into nodes, don't store unnecessary references
     // TODO: Replace with floats again, find a way around imprecision
     // TODO: Merge memory tree and normal tree?
+    // TODO: Bounded buffer find cases where index is negative (from rollover)
+    // TODO: Try to reduce pointer number, look into ways of storing trees (implicit?)
     private ShingledNode root;
     private int dimension;
     private Random random;
@@ -147,6 +149,7 @@ public class ShingledTree implements Serializable {
         return checkNodeConsistency(root, rootMinPoint, rootMaxPoint);
     }
 
+    // TODO: TEMPORARY
     private boolean checkNodeConsistency(ShingledNode n, double[] minPoint, double[] maxPoint) {
         if (n instanceof ShingledLeaf) {
             boolean equals = Arrays.equals(((ShingledLeaf)n).point.toArray(), minPoint) && Arrays.equals(((ShingledLeaf)n).point.toArray(), maxPoint);
@@ -213,28 +216,47 @@ public class ShingledTree implements Serializable {
 
         // If parent is root, set sibling to root and update depths
         if (root.equals(parent)) {
+            ShingledBranch bRoot = (ShingledBranch)root;
+            for (int i = 0; i < dimension; i++) {
+                // If leaf made up bounding box at dimension, set to other side
+                if ((leaf.equals(parent.left)) != bRoot.childMinPointDirections.get(i)) {
+                    rootMinPoint[i] = bRoot.childMinPointValues[i];
+                }
+                if ((leaf.equals(parent.left)) != bRoot.childMaxPointDirections.get(i)) {
+                    rootMaxPoint[i] = bRoot.childMaxPointValues[i];
+                }
+            }
+
             sibling.parent = null;
-            leaf.parent = null; // In case the returned node is used somehow
             root = sibling;
-            // TODO: Handle bounding boxes here? <-- Don't think this is necessary
-            shrinkBoxUpwards(leaf);
+
             return leaf;
         }
+
+        // Shrink bounding box before updating pointers
+        shrinkBoxUpwards(leaf);
 
         // Move sibling up a layer and link nodes
         ShingledBranch grandparent = parent.parent;
         sibling.parent = grandparent;
+        // In case the returned node is used somehow
+        leaf.parent = null;
         if (parent.equals(grandparent.left)) {
             grandparent.left = sibling;
         } else {
             grandparent.right = sibling;
         }
-        parent = grandparent;
+
+        // TODO: TEMPORARY
+        if (!checkConsistency()) {
+            System.out.println("INCONSISTENT TREE!!!!!!!!!!");
+            System.out.println("INCONSISTENT PRINTOUT:");
+            System.out.println(toString());
+        }
 
         // Update leaf counts for each branch
         updateLeafCountUpwards(grandparent, -1);
-        // Shrink bounding box
-        shrinkBoxUpwards(leaf);
+
         return leaf;
     }
 
@@ -351,8 +373,13 @@ public class ShingledTree implements Serializable {
 
         // Sets values for newly created branch
         for (int i = 0; i < dimension; i++) {
+            // In this case, minPoint and maxPoint represent the bounding box of leaf's sibling
+            // They've been slowly cut down from traversing down the tree
+            // Set the point directions for branch by checking if leaf or the other node is a min/max
             branch.childMinPointDirections.set(i, (leaf.point.get(i) < minPoint[i]) != leaf.equals(branch.left));
             branch.childMaxPointDirections.set(i, (leaf.point.get(i) > maxPoint[i]) != leaf.equals(branch.left));
+            // Set the point values to the value which is NOT the min and NOT the max respectively
+            // aka the max and min, flipped
             branch.childMinPointValues[i] = Math.max(leaf.point.get(i), minPoint[i]);
             branch.childMaxPointValues[i] = Math.min(leaf.point.get(i), maxPoint[i]);
         }
@@ -385,66 +412,74 @@ public class ShingledTree implements Serializable {
     /**
      * Shrinks the box up the tree, starting from a node
      * Expected to be called on removal with the removed leaf
-     * WARNING: Worst case linear?
      */
     private void shrinkBoxUpwards(ShingledLeaf leaf) {
-        // TODO: TEMPORARY
-        TEMPUPDATEBOXES();
-        if (true) return;
-        // TODO: Merge into insertPoint, saves time because that's already top down
         // The bits of parent's bounding box which are determined by the child
         // --> Whether or not the leaf forms the edge of the bounding box 
-        BitSet minDetermined = (BitSet)leaf.parent.childMinPointDirections.clone();
-        BitSet maxDetermined = (BitSet)leaf.parent.childMaxPointDirections.clone();
-        // {x}Determined is the inverse of {x}PointDirections
-        // If left, flip
-        // If right, it's already flipped
-        if (leaf.equals(leaf.parent.left)) {
-            minDetermined.flip(0, dimension);
-            maxDetermined.flip(0, dimension);
-        }
-        ShingledNode node = leaf;
-        double[] altMins = new double[dimension];
-        double[] altMaxes = new double[dimension];
-		while (!minDetermined.isEmpty() || !maxDetermined.isEmpty()) {
-            // For the bits that are determined, get their values from the other child
-            // TODO: Replace with more efficient algorithm
-            // Can go up to root or down to leaves?
-            ShingledNode tempN = node;
-            mapLeaves((l) -> {
-                for (int i = minDetermined.nextSetBit(0); i != -1; i = minDetermined.nextSetBit(i + 1)) {
-                    if (l.point.get(i) < altMins[i]) {
-                        if (tempN.equals(tempN.parent.left)) {
-                            tempN.parent.childMinPointDirections.set(i);
-                        } else {
-                            tempN.parent.childMinPointDirections.clear(i);
-                        }
-                        tempN.parent.childMinPointValues[i] = altMins[i];
-                        altMins[i] = l.point.get(i);
-                    }
-                }
-                for (int i = maxDetermined.nextSetBit(0); i != -1; i = maxDetermined.nextSetBit(i + 1)) {
-                    if (l.point.get(i) > altMaxes[i]) {
-                        if (tempN.equals(tempN.parent.left)) {
-                            tempN.parent.childMaxPointDirections.set(i);
-                        } else {
-                            tempN.parent.childMaxPointDirections.clear(i);
-                        }
-                        tempN.parent.childMaxPointValues[i] = altMaxes[i];
-                        altMaxes[i] = l.point.get(i);
-                    }
-                }
-            }, getSibling(node));
+        BitSet minDetermined = new BitSet();
+        BitSet maxDetermined = new BitSet();
+        minDetermined.set(0, dimension);
+        maxDetermined.set(0, dimension);
 
+        ShingledBranch node = leaf.parent;
+        ShingledNode previousNode = leaf;
+        double[] altMins = new double[dimension];
+        Arrays.fill(altMins, Double.MAX_VALUE);
+        double[] altMaxes = new double[dimension];
+        // Not Double.MIN_VALUE!
+        Arrays.fill(altMaxes, -Double.MAX_VALUE); 
+		while ((!minDetermined.isEmpty() || !maxDetermined.isEmpty()) && node != null) {
             // Update the determined bits with parent
-            if (node.equals(node.parent.left)) {
-                minDetermined.andNot(node.parent.childMinPointDirections);
-                maxDetermined.andNot(node.parent.childMaxPointDirections);
+            // This represents the continued effect of the removed leaf on upper bounding boxes
+            if (previousNode.equals(node.left)) {
+                minDetermined.andNot(node.childMinPointDirections);
+                maxDetermined.andNot(node.childMaxPointDirections);
             } else {
-                minDetermined.and(node.parent.childMinPointDirections);
-                maxDetermined.and(node.parent.childMaxPointDirections);
+                minDetermined.and(node.childMinPointDirections);
+                maxDetermined.and(node.childMaxPointDirections);
             }
+
+            // For the bits that are determined, check against the other child
+            // If the other child sets a new min/max, update directions to current child
+            // Update values to other child
+            // Expand alt min/max box if necessary
+            for (int i = minDetermined.nextSetBit(0); i != -1; i = minDetermined.nextSetBit(i + 1)) {
+                if (node.childMinPointValues[i] < altMins[i]) {
+                    if (previousNode.equals(node.left)) {
+                        node.childMinPointDirections.set(i);
+                    } else {
+                        node.childMinPointDirections.clear(i);
+                    }
+                    double temp = node.childMinPointValues[i];
+                    node.childMinPointValues[i] = altMins[i];
+                    altMins[i] = temp;
+                }
+            }
+            for (int i = maxDetermined.nextSetBit(0); i != -1; i = maxDetermined.nextSetBit(i + 1)) {
+                if (node.childMaxPointValues[i] > altMaxes[i]) {
+                    if (previousNode.equals(node.left)) {
+                        node.childMaxPointDirections.set(i);
+                    } else {
+                        node.childMaxPointDirections.clear(i);
+                    }
+                    double temp = node.childMaxPointValues[i];
+                    node.childMaxPointValues[i] = altMaxes[i];
+                    altMaxes[i] = temp;
+                }
+            }
+
+            previousNode = node;
             node = node.parent;
+        }
+
+        // Root reached, update main boxes
+        if (node == null) {
+            for (int i = minDetermined.nextSetBit(0); i != -1; i = minDetermined.nextSetBit(i + 1)) {
+                rootMinPoint[i] = altMins[i];
+            }
+            for (int i = maxDetermined.nextSetBit(0); i != -1; i = maxDetermined.nextSetBit(i + 1)) {
+                rootMaxPoint[i] = altMaxes[i];
+            }
         }
     }
 
