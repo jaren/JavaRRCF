@@ -22,11 +22,7 @@ import java.io.Serializable;
  */
 public class ShingledTree implements Serializable {
     // TODO: Test with leaves map / array instead of getting leaves at runtime
-    // TODO: Do we have to consider the tri state thing?
-    // TODO: Replace min/max determined with single array and bitset
-    // TODO: Collapse unnecessary classes (shingledpoint) into nodes, don't store unnecessary references
     // TODO: Replace with floats again, find a way around imprecision
-    // TODO: Merge memory tree and normal tree?
     // TODO: Bounded buffer find cases where index is negative (from rollover)
     // TODO: Try to reduce pointer number, look into ways of storing trees (implicit?)
     private ShingledNode root;

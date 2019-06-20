@@ -14,8 +14,7 @@ import java.io.Serializable;
  */
 public class ShingledForest implements Serializable {
     private int shingleSize;
-    // TODO: Change to private
-    public ShingledTree[] trees;
+    private ShingledTree[] trees;
     private BoundedBuffer<Double> buffer;
 
     public ShingledForest(Random random, int shingleSize, int numTrees, int treeSize) {
@@ -30,6 +29,15 @@ public class ShingledForest implements Serializable {
 
     public ShingledForest(int shingleSize, int numTrees, int treeSize) {
         this(new Random(), shingleSize, numTrees, treeSize);
+    }
+
+    @Override
+    public String toString() {
+        String[] vals = new String[trees.length];
+        for (int i = 0; i < trees.length; i++) {
+            vals[i] = trees[i].toString();
+        }
+        return String.join("\n", vals);
     }
 
     /**

@@ -18,7 +18,6 @@ import rrcf.memory.ShingledPoint;
 import rrcf.memory.ShingledTree;
 
 public class TreeComparisonTest {
-    // TODO: toString forest method
     @Test
     public void ComparisonTestForest() {
         Random rTest = new Random(1);
@@ -44,11 +43,11 @@ public class TreeComparisonTest {
             double v2 = testVerify.addPoint(val);
             double v1 = testUnknown.addPoint(val);
             System.out.println("Expected:");
-            System.out.println(testUnknown.trees[0].toString());
+            System.out.println(testUnknown.toString());
             System.out.println("Actual:");
-            System.out.println(testVerify.trees[0].toString());
+            System.out.println(testVerify.toString());
             assertEquals(v2, v1, 0.000001);
-            assertEquals(testVerify.trees[0].toString(), testUnknown.trees[0].toString());
+            assertEquals(testVerify.toString(), testUnknown.toString());
         }
     }
 
