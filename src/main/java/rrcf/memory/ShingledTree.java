@@ -77,7 +77,6 @@ public class ShingledTree implements Serializable {
             double[] rightMinBox = currentMinBox.clone();
             double[] rightMaxBox = currentMaxBox.clone();
             for (int i = 0; i < dimension; i++) {
-                // TODO: Extract to function
                 if (b.childMinPointDirections.get(i)) {
                     leftMinBox[i] = b.childMinPointValues[i];
                 } else {
@@ -145,47 +144,6 @@ public class ShingledTree implements Serializable {
         }
     }
 
-    private boolean checkConsistency() {
-        return checkNodeConsistency(root, rootMinPoint, rootMaxPoint);
-    }
-
-    // TODO: TEMPORARY
-    private boolean checkNodeConsistency(ShingledNode n, double[] minPoint, double[] maxPoint) {
-        if (n instanceof ShingledLeaf) {
-            boolean equals = Arrays.equals(((ShingledLeaf)n).point.toArray(), minPoint) && Arrays.equals(((ShingledLeaf)n).point.toArray(), maxPoint);
-            if (!equals) {
-                System.out.printf("Node is inconsistent: %s\n", ((ShingledLeaf)n).point.toString());
-                System.out.printf("Min: %s\n", Arrays.toString(minPoint));
-                System.out.printf("Max: %s\n\n", Arrays.toString(maxPoint));
-            }
-            return equals;
-        } else {
-            ShingledBranch b = (ShingledBranch)n;
-            double[] leftMin = minPoint.clone();
-            double[] leftMax = maxPoint.clone();
-            double[] rightMin = minPoint.clone();
-            double[] rightMax = maxPoint.clone();
-            for (int i = 0; i < dimension; i++) {
-                if (b.childMinPointDirections.get(i)) {
-                    leftMin[i] = b.childMinPointValues[i];
-                } else {
-                    rightMin[i] = b.childMinPointValues[i];
-                }
-
-                if (b.childMaxPointDirections.get(i)) {
-                    leftMax[i] = b.childMaxPointValues[i];
-                } else {
-                    rightMax[i] = b.childMaxPointValues[i];
-                }
-            }
-
-            // Don't want to short circuit
-            boolean left = checkNodeConsistency(b.left, leftMin, leftMax);
-            boolean right = checkNodeConsistency(b.right, rightMin, rightMax);
-            return left && right;
-        }
-    }
-
     /**
      * Delete a leaf (found from index) from the tree and return deleted node
      */
@@ -245,13 +203,6 @@ public class ShingledTree implements Serializable {
             grandparent.left = sibling;
         } else {
             grandparent.right = sibling;
-        }
-
-        // TODO: TEMPORARY
-        if (!checkConsistency()) {
-            System.out.println("INCONSISTENT TREE!!!!!!!!!!");
-            System.out.println("INCONSISTENT PRINTOUT:");
-            System.out.println(toString());
         }
 
         // Update leaf counts for each branch
@@ -399,13 +350,6 @@ public class ShingledTree implements Serializable {
         // Increase leaf counts
         updateLeafCountUpwards(parent, 1);
 
-        // TODO: TEMPORARY
-        if (!checkConsistency()) {
-            System.out.println("INCONSISTENT TREE!!!!!!!!!!");
-            System.out.println("INCONSISTENT PRINTOUT:");
-            System.out.println(toString());
-        }
-
         return leaf;
     }
 
@@ -429,13 +373,15 @@ public class ShingledTree implements Serializable {
         // Not Double.MIN_VALUE!
         Arrays.fill(altMaxes, -Double.MAX_VALUE); 
 		while ((!minDetermined.isEmpty() || !maxDetermined.isEmpty()) && node != null) {
-            // For the bits that are determined, check against the other child
-            // If the other child sets a new min/max, update directions to current child
-            // Update values to other child
-            // Expand alt min/max box if necessary
+            // For the bits that are determined
             for (int i = minDetermined.nextSetBit(0); i != -1; i = minDetermined.nextSetBit(i + 1)) {
+                // Check if new node makes them undetermined
                 if (previousNode.equals(node.left) != node.childMinPointDirections.get(i)) {
+                    // If not, then this dimension continues up
+                    // Check against the other child
+                    // If the other child sets a new min/max, update directions to current child
                     if (node.childMinPointValues[i] < altMins[i]) {
+                        // Update values to other child
                         if (previousNode.equals(node.left)) {
                             node.childMinPointDirections.set(i);
                         } else {
@@ -443,13 +389,18 @@ public class ShingledTree implements Serializable {
                         }
                         double temp = node.childMinPointValues[i];
                         node.childMinPointValues[i] = altMins[i];
+                        // Expand alt min/max box if necessary
                         altMins[i] = temp;
                     }
+                // If bit is lost further up
                 } else {
+                    // The removed point must make up the pointValues, so set it to the alt value
                     node.childMinPointValues[i] = altMins[i];
+                    // Forget the bit for later iterations
                     minDetermined.clear(i);
                 }
             }
+            // Same for max
             for (int i = maxDetermined.nextSetBit(0); i != -1; i = maxDetermined.nextSetBit(i + 1)) {
                 if (previousNode.equals(node.left) != node.childMaxPointDirections.get(i)) {
                     if (node.childMaxPointValues[i] > altMaxes[i]) {
@@ -479,51 +430,6 @@ public class ShingledTree implements Serializable {
             }
             for (int i = maxDetermined.nextSetBit(0); i != -1; i = maxDetermined.nextSetBit(i + 1)) {
                 rootMaxPoint[i] = altMaxes[i];
-            }
-        }
-    }
-
-    private void TEMPUPDATEBOXES() {
-        TEMPPOPULATEBB(root);
-        rootMinPoint = root.mbb.clone();
-        rootMaxPoint = root.ubb.clone();
-
-        mapBranches((branch) -> {
-            for (int i = 0; i < dimension; i++) {
-                if (branch.left.mbb[i] == branch.mbb[i]) {
-                    branch.childMinPointDirections.clear(i);
-                    branch.childMinPointValues[i] = branch.right.mbb[i];
-                } else {
-                    branch.childMinPointDirections.set(i);
-                    branch.childMinPointValues[i] = branch.left.mbb[i];
-                }
-
-                if (branch.left.ubb[i] == branch.ubb[i]) {
-                    branch.childMaxPointDirections.clear(i);
-                    branch.childMaxPointValues[i] = branch.right.ubb[i];
-                } else {
-                    branch.childMaxPointDirections.set(i);
-                    branch.childMaxPointValues[i] = branch.left.ubb[i];
-                }
-            }
-        });
-    }
-
-    private void TEMPPOPULATEBB(ShingledNode n) {
-        n.mbb = new double[dimension];
-        n.ubb = new double[dimension];
-        if (n instanceof ShingledLeaf) {
-            for (int i = 0; i < dimension; i++) {
-                n.mbb[i] = ((ShingledLeaf)n).point.get(i);
-                n.ubb[i] = ((ShingledLeaf)n).point.get(i);
-            }
-        } else {
-            ShingledBranch b = (ShingledBranch) n;
-            TEMPPOPULATEBB(b.left);
-            TEMPPOPULATEBB(b.right);
-            for (int i = 0; i < dimension; i++) {
-                b.mbb[i] = Math.min(b.left.mbb[i], b.right.mbb[i]);
-                b.ubb[i] = Math.max(b.left.ubb[i], b.right.ubb[i]);
             }
         }
     }
