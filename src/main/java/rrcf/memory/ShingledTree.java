@@ -149,7 +149,13 @@ public class ShingledTree implements Serializable {
 
     private boolean checkNodeConsistency(ShingledNode n, double[] minPoint, double[] maxPoint) {
         if (n instanceof ShingledLeaf) {
-            return Arrays.equals(((ShingledLeaf)n).point.toArray(), minPoint) && Arrays.equals(((ShingledLeaf)n).point.toArray(), maxPoint);
+            boolean equals = Arrays.equals(((ShingledLeaf)n).point.toArray(), minPoint) && Arrays.equals(((ShingledLeaf)n).point.toArray(), maxPoint);
+            if (!equals) {
+                System.out.printf("Node is inconsistent: %s\n", ((ShingledLeaf)n).point.toString());
+                System.out.printf("Min: %s\n", Arrays.toString(minPoint));
+                System.out.printf("Max: %s\n\n", Arrays.toString(maxPoint));
+            }
+            return equals;
         } else {
             ShingledBranch b = (ShingledBranch)n;
             double[] leftMin = minPoint.clone();
@@ -169,8 +175,11 @@ public class ShingledTree implements Serializable {
                     rightMax[i] = b.childMaxPointValues[i];
                 }
             }
-            return checkNodeConsistency(b.left, leftMin, leftMax)
-                && checkNodeConsistency(b.right, rightMin, rightMax);
+
+            // Don't want to short circuit
+            boolean left = checkNodeConsistency(b.left, leftMin, leftMax);
+            boolean right = checkNodeConsistency(b.right, rightMin, rightMax);
+            return left && right;
         }
     }
 
@@ -313,24 +322,27 @@ public class ShingledTree implements Serializable {
                 }
 
                 for (int i = 0; i < dimension; i++) {
-                    // If the point is smaller than previous and path lies on the same side as the min point direction
-                    // Update the value and direction
-                    // Otherwise update the value if necessary
-                    if (point.get(i) < oldMin[i] && useLeftSide == b.childMinPointDirections.get(i)) {
-                        b.childMinPointDirections.flip(i);
-                        b.childMinPointValues[i] = oldMin[i];
-                    } else {
-                        b.childMinPointValues[i] = Math.min(b.childMinPointValues[i], point.get(i));
+                    // If the path did not make up the min point
+                    if (useLeftSide == b.childMinPointDirections.get(i)) {
+                        // Update the value and direction if it's a new min
+                        if (point.get(i) < oldMin[i]) {
+                            b.childMinPointDirections.flip(i);
+                            b.childMinPointValues[i] = oldMin[i];
+                        // Otherwise update the value if necessary
+                        } else {
+                            b.childMinPointValues[i] = Math.min(b.childMinPointValues[i], point.get(i));
+                        }
                     }
                     // Same for max box
-                    if (point.get(i) > oldMax[i] && useLeftSide == b.childMaxPointDirections.get(i)) {
-                        b.childMaxPointDirections.flip(i);
-                        b.childMaxPointValues[i] = oldMax[i];
-                    } else {
-                        b.childMaxPointValues[i] = Math.max(b.childMaxPointValues[i], point.get(i));
+                    if (useLeftSide == b.childMaxPointDirections.get(i)) {
+                        if (point.get(i) > oldMax[i]) {
+                            b.childMaxPointDirections.flip(i);
+                            b.childMaxPointValues[i] = oldMax[i];
+                        } else {
+                            b.childMaxPointValues[i] = Math.max(b.childMaxPointValues[i], point.get(i));
+                        }
                     }
                 }
-
             }
         }
 

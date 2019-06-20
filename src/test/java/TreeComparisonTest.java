@@ -64,6 +64,7 @@ public class TreeComparisonTest {
         Map<Integer, ShingledPoint> points = new HashMap<>();
         // Technically not using shingling for points
         for (int i = 0; i < iters; i++) {
+            System.out.printf("Iteration %d\n", i);
             if (!points.isEmpty() && (rTest.nextDouble() > 0.8 || testVerify.size() > maxTreeSize)) {
                 Object[] keys = points.keySet().toArray();
                 Integer k = (Integer)keys[rTest.nextInt(keys.length)];
