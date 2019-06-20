@@ -18,11 +18,14 @@ import java.io.Serializable;
  * Robust random cut tree data structure used for anomaly detection on streaming
  * data
  * 
+ * Implemented optimizations:
+ * - Store the values for each leaf in a shared buffer between all trees
+ * - Store only half of the bounding boxes at each branch
+ * 
  * Represents a single random cut tree, supporting shingled data points of one dimension
  */
 public class ShingledTree implements Serializable {
     // TODO: Test with leaves map / array instead of getting leaves at runtime
-    // TODO: Do we have to consider the tri state thing?
     // TODO: Replace min/max determined with single array and bitset
     // TODO: Collapse unnecessary classes (shingledpoint) into nodes, don't store unnecessary references
     // TODO: Replace with floats again, find a way around imprecision
@@ -30,20 +33,22 @@ public class ShingledTree implements Serializable {
     // TODO: Bounded buffer find cases where index is negative (from rollover)
     // TODO: Try to reduce pointer number, look into ways of storing trees (implicit?)
     private ShingledNode root;
+    private BoundedBuffer<Double> buffer;
     private int dimension;
     private Random random;
     private double[] rootMinPoint;
     private double[] rootMaxPoint;
 
-    public ShingledTree(Random r, int shingleSize) {
+    public ShingledTree(Random r, BoundedBuffer<Double> b, int shingleSize) {
         random = r;
+        buffer = b;
         dimension = shingleSize;
         rootMinPoint = null;
         rootMaxPoint = null;
     }
 
-    public ShingledTree(int shingleSize) {
-        this(new Random(), shingleSize);
+    public ShingledTree(BoundedBuffer<Double> b, int shingleSize) {
+        this(new Random(), b, shingleSize);
     }
 
     @Override
@@ -69,7 +74,7 @@ public class ShingledTree implements Serializable {
             depthAndTreeString[0] = depthAndTreeString[0].substring(0, depthAndTreeString[0].length() - 4);
         };
         if (node instanceof ShingledLeaf) {
-            depthAndTreeString[1] += String.format("(%s)\n", Arrays.toString(((ShingledLeaf)node).point.toArray()));
+            depthAndTreeString[1] += String.format("(%s)\n", Arrays.toString(((ShingledLeaf)node).toArray(buffer, dimension)));
         } else if (node instanceof ShingledBranch) {
             ShingledBranch b = (ShingledBranch)node;
             double[] leftMinBox = currentMinBox.clone();
@@ -147,11 +152,11 @@ public class ShingledTree implements Serializable {
     /**
      * Delete a leaf (found from index) from the tree and return deleted node
      */
-    public ShingledLeaf forgetPoint(ShingledPoint point) throws NoSuchElementException {
-        ShingledLeaf leaf = findLeaf(point);
+    public ShingledLeaf forgetPoint(long startIndex) throws NoSuchElementException {
+        ShingledLeaf leaf = findLeaf(startIndex);
         
         if (leaf == null) {
-            throw new NoSuchElementException(String.format("Point not found: %s", Arrays.toString(point.toArray())));
+            throw new NoSuchElementException(String.format("Point not found: %d", startIndex));
         }
 
         // If duplicate points exist, decrease num for all nodes above
@@ -214,21 +219,18 @@ public class ShingledTree implements Serializable {
     /**
      * Insert a point into the tree with a given index and create a new leaf
      */
-    public ShingledLeaf insertPoint(ShingledPoint point) {
+    public ShingledLeaf insertPoint(long startIndex) {
         // If no points, set necessary variables
         if (root == null) {
-            ShingledLeaf leaf = new ShingledLeaf(point);
+            ShingledLeaf leaf = new ShingledLeaf(startIndex);
             root = leaf;
-            rootMinPoint = leaf.point.toArray().clone();
-            rootMaxPoint = leaf.point.toArray().clone();
+            rootMinPoint = leaf.toArray(buffer, dimension).clone();
+            rootMaxPoint = leaf.toArray(buffer, dimension).clone();
             return leaf;
         }
 
-        // Check that dimensions are consistent and index doesn't exist
-        assert point.size() == dimension;
-
         // Check for duplicates and only update counts if it exists
-        ShingledLeaf duplicate = findLeaf(point);
+        ShingledLeaf duplicate = findLeaf(startIndex);
         if (duplicate != null) {
             updateLeafCountUpwards(duplicate, 1);
             return duplicate;
@@ -245,26 +247,26 @@ public class ShingledTree implements Serializable {
 
         // Update main bounding box
         for (int i = 0; i < dimension; i++) {
-            if (point.get(i) < rootMinPoint[i]) {
-                rootMinPoint[i] = point.get(i);
+            if (getPointValue(startIndex, i) < rootMinPoint[i]) {
+                rootMinPoint[i] = getPointValue(startIndex, i);
             }
-            if (point.get(i) > rootMaxPoint[i]) {
-                rootMaxPoint[i] = point.get(i);
+            if (getPointValue(startIndex, i) > rootMaxPoint[i]) {
+                rootMaxPoint[i] = getPointValue(startIndex, i);
             }
         }
 
         // Traverse tree until insertion spot found
         while (true) {
-            Cut c = insertPointCut(point, minPoint, maxPoint);
+            Cut c = insertPointCut(startIndex, minPoint, maxPoint);
             // Has to be less than because less than or equal goes to the left
             // Equal would make node go to the right, excluding some points from query
             if (c.value < minPoint[c.dim]) {
-                leaf = new ShingledLeaf(point);
+                leaf = new ShingledLeaf(startIndex);
                 branch = new ShingledBranch(c, dimension, leaf, node, leaf.num + node.num);
                 break;
             // Shouldn't result in going down too far because dimensions with 0 variance have a 0 probability of being chosen?
-            } else if (c.value >= maxPoint[c.dim] && point.get(c.dim) > c.value) {
-                leaf = new ShingledLeaf(point);
+            } else if (c.value >= maxPoint[c.dim] && getPointValue(startIndex, c.dim) > c.value) {
+                leaf = new ShingledLeaf(startIndex);
                 branch = new ShingledBranch(c, dimension, node, leaf, leaf.num + node.num);
                 break;
             } else {
@@ -272,7 +274,7 @@ public class ShingledTree implements Serializable {
                 parent = b;
                 BitSet minSet = (BitSet)b.childMinPointDirections.clone();
                 BitSet maxSet = (BitSet)b.childMaxPointDirections.clone();
-                if (point.get(b.cut.dim) <= b.cut.value) {
+                if (getPointValue(startIndex, b.cut.dim) <= b.cut.value) {
                     node = b.left;
                     useLeftSide = true;
                 } else {
@@ -298,21 +300,21 @@ public class ShingledTree implements Serializable {
                     // If the path did not make up the min point
                     if (useLeftSide == b.childMinPointDirections.get(i)) {
                         // Update the value and direction if it's a new min
-                        if (point.get(i) < oldMin[i]) {
+                        if (getPointValue(startIndex, i) < oldMin[i]) {
                             b.childMinPointDirections.flip(i);
                             b.childMinPointValues[i] = oldMin[i];
                         // Otherwise update the value if necessary
                         } else {
-                            b.childMinPointValues[i] = Math.min(b.childMinPointValues[i], point.get(i));
+                            b.childMinPointValues[i] = Math.min(b.childMinPointValues[i], getPointValue(startIndex, i));
                         }
                     }
                     // Same for max box
                     if (useLeftSide == b.childMaxPointDirections.get(i)) {
-                        if (point.get(i) > oldMax[i]) {
+                        if (getPointValue(startIndex, i) > oldMax[i]) {
                             b.childMaxPointDirections.flip(i);
                             b.childMaxPointValues[i] = oldMax[i];
                         } else {
-                            b.childMaxPointValues[i] = Math.max(b.childMaxPointValues[i], point.get(i));
+                            b.childMaxPointValues[i] = Math.max(b.childMaxPointValues[i], getPointValue(startIndex, i));
                         }
                     }
                 }
@@ -327,12 +329,12 @@ public class ShingledTree implements Serializable {
             // In this case, minPoint and maxPoint represent the bounding box of leaf's sibling
             // They've been slowly cut down from traversing down the tree
             // Set the point directions for branch by checking if leaf or the other node is a min/max
-            branch.childMinPointDirections.set(i, (leaf.point.get(i) < minPoint[i]) != leaf.equals(branch.left));
-            branch.childMaxPointDirections.set(i, (leaf.point.get(i) > maxPoint[i]) != leaf.equals(branch.left));
+            branch.childMinPointDirections.set(i, (getPointValue(leaf.startIndex, i) < minPoint[i]) != leaf.equals(branch.left));
+            branch.childMaxPointDirections.set(i, (getPointValue(leaf.startIndex, i) > maxPoint[i]) != leaf.equals(branch.left));
             // Set the point values to the value which is NOT the min and NOT the max respectively
             // aka the max and min, flipped
-            branch.childMinPointValues[i] = Math.max(leaf.point.get(i), minPoint[i]);
-            branch.childMaxPointValues[i] = Math.min(leaf.point.get(i), maxPoint[i]);
+            branch.childMinPointValues[i] = Math.max(getPointValue(leaf.startIndex, i), minPoint[i]);
+            branch.childMaxPointValues[i] = Math.min(getPointValue(leaf.startIndex, i), maxPoint[i]);
         }
 
         node.parent = branch;
@@ -458,11 +460,11 @@ public class ShingledTree implements Serializable {
     /**
      * Finds the closest leaf to a point under a specified node
      */
-    private ShingledLeaf query(ShingledPoint point) {
+    private ShingledLeaf query(long startIndex) {
         ShingledNode n = root;
         while (!(n instanceof ShingledLeaf)) {
             ShingledBranch b = (ShingledBranch) n;
-            if (point.get(b.cut.dim) <= b.cut.value) {
+            if (getPointValue(startIndex, b.cut.dim) <= b.cut.value) {
                 n = b.left;
             } else {
                 n = b.right;
@@ -504,9 +506,9 @@ public class ShingledTree implements Serializable {
     /**
      * Returns a leaf containing a point if it exists
      */
-    public ShingledLeaf findLeaf(ShingledPoint point) {
-        ShingledLeaf nearest = query(point);
-        if (nearest.point.equals(point)) {
+    public ShingledLeaf findLeaf(long startIndex) {
+        ShingledLeaf nearest = query(startIndex);
+        if (nearest.startIndex == startIndex) {
             return nearest;
         }
         return null;
@@ -515,14 +517,14 @@ public class ShingledTree implements Serializable {
     /**
      * Generates a random cut from the span of a point and bounding box
      */
-    private Cut insertPointCut(ShingledPoint point, double[] minPoint, double[] maxPoint) {
+    private Cut insertPointCut(long startIndex, double[] minPoint, double[] maxPoint) {
         double[] newMinBox = new double[minPoint.length];
         double[] span = new double[minPoint.length];
         // Cumulative sum of span
         double[] spanSum = new double[minPoint.length];
         for (int i = 0; i < dimension; i++) {
-            newMinBox[i] = Math.min(minPoint[i], point.get(i));
-            double maxI = Math.max(maxPoint[i], point.get(i));
+            newMinBox[i] = Math.min(minPoint[i], getPointValue(startIndex, i));
+            double maxI = Math.max(maxPoint[i], getPointValue(startIndex, i));
             span[i] = maxI - newMinBox[i];
             if (i > 0) {
                 spanSum[i] = spanSum[i - 1] + span[i];
@@ -544,6 +546,10 @@ public class ShingledTree implements Serializable {
         assert cutDim > -1;
         double value = newMinBox[cutDim] + spanSum[cutDim] - r;
         return new Cut(cutDim, value);
+    }
+
+    private double getPointValue(long startIndex, int offset) {
+        return buffer.get(startIndex + offset);
     }
 
     /** 
