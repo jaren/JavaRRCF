@@ -352,9 +352,9 @@ public class ShingledTree implements Serializable {
         // Sets values for newly created branch
         for (int i = 0; i < dimension; i++) {
             branch.childMinPointDirections.set(i, (leaf.point.get(i) < minPoint[i]) != leaf.equals(branch.left));
-            branch.childMaxPointDirections.set(i, (leaf.point.get(i) > minPoint[i]) != leaf.equals(branch.left));
+            branch.childMaxPointDirections.set(i, (leaf.point.get(i) > maxPoint[i]) != leaf.equals(branch.left));
             branch.childMinPointValues[i] = Math.max(leaf.point.get(i), minPoint[i]);
-            branch.childMaxPointValues[i] = Math.min(leaf.point.get(i), minPoint[i]);
+            branch.childMaxPointValues[i] = Math.min(leaf.point.get(i), maxPoint[i]);
         }
 
         node.parent = branch;
@@ -375,6 +375,8 @@ public class ShingledTree implements Serializable {
         // TODO: TEMPORARY
         if (!checkConsistency()) {
             System.out.println("INCONSISTENT TREE!!!!!!!!!!");
+            System.out.println("INCONSISTENT PRINTOUT:");
+            System.out.println(toString());
         }
 
         return leaf;
