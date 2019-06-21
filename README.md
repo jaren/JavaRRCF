@@ -13,8 +13,9 @@
 
 ## Usage
 ### Memory package:
+ * Memory-optimized version of RRCF (storing only delta bounding boxes and using a shared buffer for shingled points)
  * Less time efficient
- * Potentially decreases memory usage by half
+ * Decreases memory usage by about 40%
  * Intended for use with single-dimensional data
  * Automatically handles data shingling
 ### General package:
