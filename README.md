@@ -1,7 +1,13 @@
 # JavaRRCF
-### Java implementation of Robust Random Cut Forest
+### Java implementation of a Robust Random Cut Forest:
 ### Inspired by https://github.com/kLabUM/rrcf
 ### Original paper: http://proceedings.mlr.press/v48/guha16.pdf
+* An unsupervised framework for detecting and classifying anomalies in streaming data
+* Features:
+ * Is well-suited to streaming data
+ * Handles high-dimensional data
+ * Avoids influence from irrelevant dimensions
+ * Handles duplicates which would mask outliers
 
 #### General package:
 * Includes generalized versions of Random Cut Trees and Random Cut Forests
