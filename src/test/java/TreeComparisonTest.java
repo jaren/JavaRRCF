@@ -12,9 +12,7 @@ import org.junit.Test;
 
 import rrcf.general.RCTree;
 import rrcf.general.SimpleShingledForest;
-import rrcf.memory.BoundedBuffer;
 import rrcf.memory.ShingledForest;
-import rrcf.memory.ShingledPoint;
 import rrcf.memory.ShingledTree;
 
 public class TreeComparisonTest {
@@ -60,28 +58,26 @@ public class TreeComparisonTest {
         int maxTreeSize = rTest.nextInt(10) + 10;
         ShingledTree testUnknown = new ShingledTree(new Random(randomSeed), shingleSize);
         RCTree testVerify = new RCTree(new Random(randomSeed));
-        Map<Integer, ShingledPoint> points = new HashMap<>();
+        Map<Integer, double[]> points = new HashMap<>();
         // Technically not using shingling for points
         for (int i = 0; i < iters; i++) {
             System.out.printf("Iteration %d\n", i);
             if (!points.isEmpty() && (rTest.nextDouble() > 0.8 || testVerify.size() > maxTreeSize)) {
                 Object[] keys = points.keySet().toArray();
                 Integer k = (Integer)keys[rTest.nextInt(keys.length)];
-                System.out.printf("Removing %s\n", Arrays.toString(points.get(k).toArray()));
+                System.out.printf("Removing %s\n", Arrays.toString(points.get(k)));
                 testUnknown.forgetPoint(points.get(k));
                 testVerify.forgetPoint(k);
                 points.remove(k);
             } else {
-                BoundedBuffer<Double> b = new BoundedBuffer<>(shingleSize);
+                double[] b = new double[shingleSize];
                 for (int d = 0; d < shingleSize; d++) {
-                    double val = rTest.nextInt(10000);
-                    b.add(val);
+                    b[d] = rTest.nextInt(10000);
                 }
-                ShingledPoint s = new ShingledPoint(b, 0, shingleSize);
-                System.out.printf("Inserting %s\n", Arrays.toString(s.toArray()));
-                points.put(i, s);
-                testVerify.insertPoint(s.toArray(), i);
-                testUnknown.insertPoint(s);
+                System.out.printf("Inserting %s\n", Arrays.toString(b));
+                points.put(i, b);
+                testVerify.insertPoint(b, i);
+                testUnknown.insertPoint(b);
             }
             System.out.println("Expected:");
             System.out.println(testVerify.toString());

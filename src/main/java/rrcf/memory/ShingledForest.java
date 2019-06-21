@@ -1,6 +1,7 @@
 package rrcf.memory;
 
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Random;
@@ -14,13 +15,15 @@ import java.io.Serializable;
  */
 public class ShingledForest implements Serializable {
     private int shingleSize;
+    private int bufferLength;
     private ShingledTree[] trees;
-    private BoundedBuffer<Double> buffer;
+    private ArrayDeque<Double> buffer;
 
     public ShingledForest(Random random, int shingleSize, int numTrees, int treeSize) {
         trees = new ShingledTree[numTrees];
         assert shingleSize > 1;
-        buffer = new BoundedBuffer<>(shingleSize + treeSize - 1);
+        bufferLength = shingleSize + treeSize - 1;
+        buffer = new ArrayDeque<>(bufferLength);
         this.shingleSize = shingleSize;
         for (int i = 0; i < numTrees; i++) {
             trees[i] = new ShingledTree(random, shingleSize);
@@ -40,26 +43,47 @@ public class ShingledForest implements Serializable {
         return String.join("\n", vals);
     }
 
+    private double[] getFirstPoint() {
+        return iteratorToShingle(buffer.iterator(), false);
+    }
+
+    private double[] getLastPoint() {
+        return iteratorToShingle(buffer.descendingIterator(), true);
+    }
+
+    private double[] iteratorToShingle(Iterator<Double> it, boolean reverse) {
+        double[] arr = new double[shingleSize];
+        for (int i = 0; i < shingleSize; i++) {
+            int insert = i;
+            if (reverse) {
+                insert = shingleSize - 1 - i;
+            }
+            arr[insert] = it.next();
+        }
+        return arr;
+    }
+
     /**
      * Adds a point to the forest
      * @param value
      * @return Average collusive displacement from point insertion
      */
     public double addPoint(double value) {
-        if (buffer.full()) {
-            ShingledPoint oldestPoint = new ShingledPoint(buffer, buffer.streamStartIndex(), shingleSize);
+        if (buffer.size() == bufferLength) {
+            double[] oldestPoint = getFirstPoint();
             for (ShingledTree tree : trees) {
                 tree.forgetPoint(oldestPoint);
             }
+            buffer.removeFirst();
         }
-        int index = buffer.add(value);
-        double val = 0;
+        buffer.addLast(value);
         if (buffer.size() < shingleSize) {
             return 0;
         }
-        ShingledPoint s = new ShingledPoint(buffer, index - shingleSize + 1, shingleSize);
+        double val = 0;
+        double[] lastPoint = getLastPoint();
         for (ShingledTree tree : trees) {
-            ShingledLeaf l = tree.insertPoint(s);
+            ShingledLeaf l = tree.insertPoint(lastPoint);
             val += tree.getCollusiveDisplacement(l);
         }
         return val / trees.length;

@@ -1,10 +1,9 @@
 package rrcf.memory;
 
 public class ShingledLeaf extends ShingledNode {
-    public ShingledPoint point;
+    // Point is stored implicitly by traversing root's bounding box down to the leaf
 
-    public ShingledLeaf(ShingledPoint p) {
-        point = p;
+    public ShingledLeaf() {
         num = 1;
     }
 }
