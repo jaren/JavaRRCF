@@ -421,7 +421,7 @@ public class RCTree implements Serializable {
      */
     public RCLeaf findLeaf(double[] point) {
         RCLeaf nearest = query(point);
-        if (nearest.point[0].equals(point)) {
+        if (Arrays.equals(nearest.point[0], point)) {
             return nearest;
         }
         return null;

@@ -22,7 +22,6 @@ import java.io.Serializable;
  */
 public class ShingledTree implements Serializable {
     // TODO: Replace with floats again, find a way around imprecision
-    // TODO: Try to reduce pointer number, look into ways of storing trees (implicit?)
     private ShingledNode root;
     private int dimension;
     private Random random;
@@ -225,6 +224,8 @@ public class ShingledTree implements Serializable {
         ShingledLeaf duplicate = findLeaf(point);
         if (duplicate != null) {
             updateLeafCountUpwards(duplicate, 1);
+            // To update indices, so it's not removed too early
+            duplicate.point = point;
             return duplicate;
         }
 

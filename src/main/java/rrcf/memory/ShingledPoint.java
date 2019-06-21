@@ -44,9 +44,15 @@ public class ShingledPoint {
     public boolean equals(Object other) {
         if (other instanceof ShingledPoint) {
             ShingledPoint s = (ShingledPoint)other;
-            return buffer.equals(s.buffer)
-                && size == s.size
-                && startIndex == s.startIndex;
+            if (s.size() != size()) {
+                return false;
+            }
+            for (int i = 0; i < size; i++) {
+                if (s.get(i) != get(i)) {
+                    return false;
+                }
+            }
+            return true;
         }
         return false;
     }
