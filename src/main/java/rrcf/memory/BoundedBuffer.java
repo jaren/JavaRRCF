@@ -11,7 +11,9 @@ public class BoundedBuffer<T> {
     private T[] buffer;
     private int bufferStartIndex;
     private int size;
-    private long streamIndex;
+    // Should handle overflows fine?
+    // Only the difference matters
+    private int streamIndex;
 
     public BoundedBuffer(int bound) {
         buffer = (T[])new Object[bound];
@@ -29,7 +31,7 @@ public class BoundedBuffer<T> {
         return size;
     }
 
-    public long streamStartIndex() {
+    public int streamStartIndex() {
         return streamIndex;
     }
 
@@ -38,8 +40,8 @@ public class BoundedBuffer<T> {
      * @param index Index relative to stream start
      * @return Value at index
      */
-    public T get(long index) {
-        int adjustedIndex = (int)(index - streamIndex);
+    public T get(int index) {
+        int adjustedIndex = index - streamIndex;
         if (adjustedIndex > size) {
             throw new ArrayIndexOutOfBoundsException("Element out of bounds of buffer");
         }
@@ -57,7 +59,7 @@ public class BoundedBuffer<T> {
      * Removes oldest item if necessary
      * @return Index of item
      */
-    public long add(T value) {
+    public int add(T value) {
         buffer[getOffsetBufferIndex(size)] = value;
         if (!full()) {
             size++;

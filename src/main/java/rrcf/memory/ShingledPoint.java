@@ -8,9 +8,9 @@ import java.util.Arrays;
 public class ShingledPoint {
     private int size;
     private BoundedBuffer<Double> buffer;
-    private long startIndex;
+    private int startIndex;
 
-    public ShingledPoint(BoundedBuffer<Double> buffer, long startIndex, int size) {
+    public ShingledPoint(BoundedBuffer<Double> buffer, int startIndex, int size) {
         this.buffer = buffer;
         this.startIndex = startIndex;
         this.size = size;

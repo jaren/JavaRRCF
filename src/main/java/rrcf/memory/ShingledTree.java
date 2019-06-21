@@ -21,9 +21,7 @@ import java.io.Serializable;
  * Represents a single random cut tree, supporting shingled data points of one dimension
  */
 public class ShingledTree implements Serializable {
-    // TODO: Test with leaves map / array instead of getting leaves at runtime
     // TODO: Replace with floats again, find a way around imprecision
-    // TODO: Bounded buffer find cases where index is negative (from rollover)
     // TODO: Try to reduce pointer number, look into ways of storing trees (implicit?)
     private ShingledNode root;
     private int dimension;

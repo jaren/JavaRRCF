@@ -22,7 +22,7 @@ public class TreeComparisonTest {
     public void ComparisonTestForest() {
         Random rTest = new Random(1);
         testWithNum(rTest, 1, 1, 10, 2, 300);
-        for (long i = 0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             long randomSeed = rTest.nextLong();
             int numTrees = rTest.nextInt(10) + 1;
             int treeSize = rTest.nextInt(100) + 5;

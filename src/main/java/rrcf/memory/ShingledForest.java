@@ -52,7 +52,7 @@ public class ShingledForest implements Serializable {
                 tree.forgetPoint(oldestPoint);
             }
         }
-        long index = buffer.add(value);
+        int index = buffer.add(value);
         double val = 0;
         if (buffer.size() < shingleSize) {
             return 0;
