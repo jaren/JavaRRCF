@@ -1,4 +1,4 @@
-package rrcf.memory;
+package rrcf;
 
 import java.util.Deque;
 import java.util.Iterator;
@@ -16,17 +16,17 @@ import java.io.Serializable;
 public class ShingledForest implements Serializable {
     private int shingleSize;
     private int bufferLength;
-    private ShingledTree[] trees;
+    private RandomCutTree[] trees;
     private ArrayDeque<Double> buffer;
 
     public ShingledForest(Random random, int shingleSize, int numTrees, int treeSize) {
-        trees = new ShingledTree[numTrees];
+        trees = new RandomCutTree[numTrees];
         assert shingleSize > 1;
         bufferLength = shingleSize + treeSize - 1;
         buffer = new ArrayDeque<>(bufferLength);
         this.shingleSize = shingleSize;
         for (int i = 0; i < numTrees; i++) {
-            trees[i] = new ShingledTree(random, shingleSize);
+            trees[i] = new RandomCutTree(random, shingleSize);
         }
     }
 
@@ -71,7 +71,7 @@ public class ShingledForest implements Serializable {
     public double addPoint(double value) {
         if (buffer.size() == bufferLength) {
             double[] oldestPoint = getFirstPoint();
-            for (ShingledTree tree : trees) {
+            for (RandomCutTree tree : trees) {
                 tree.forgetPoint(oldestPoint);
             }
             buffer.removeFirst();
@@ -82,8 +82,8 @@ public class ShingledForest implements Serializable {
         }
         double val = 0;
         double[] lastPoint = getLastPoint();
-        for (ShingledTree tree : trees) {
-            ShingledLeaf l = tree.insertPoint(lastPoint);
+        for (RandomCutTree tree : trees) {
+            Leaf l = tree.insertPoint(lastPoint);
             val += tree.getCollusiveDisplacement(l);
         }
         return val / trees.length;
