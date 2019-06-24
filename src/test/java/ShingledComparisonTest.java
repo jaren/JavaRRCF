@@ -1,4 +1,5 @@
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Random;
 
@@ -28,7 +29,13 @@ public class ShingledComparisonTest {
         sForest.addPoint(6);
         assertEquals(forest.toString(), sForest.toString());
         for (int i = 0; i < 3; i++) {
-            assertEquals(forest.getDisplacement(i), sForest.getDisplacement(i), 0.00000000001);
+            double dispF = forest.getCollusiveDisplacement(i);
+            double dispS = sForest.getCollusiveDisplacement(i);
+            assertTrue(dispF >= 0);
+            assertTrue(dispS >= 0);
+            assertEquals(dispF, dispS, 0.00000000001);
+            System.out.println(dispF);
+            System.out.println(dispS);
         }
     }
 }

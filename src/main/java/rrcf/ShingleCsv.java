@@ -53,7 +53,7 @@ public class ShingleCsv {
             }
             ShingledForest forest = new ShingledForest(random, shingleSize, numTrees, treeSize, a);
             for (int i = 0; i < a.length - 1 - shingleSize; i++) {
-                System.out.printf("%d,%f,%f\n", i, a[i + shingleSize], forest.getDisplacement(i));
+                System.out.printf("%d,%f,%f\n", i, a[i + shingleSize], forest.getCollusiveDisplacement(i));
             }
         }
 

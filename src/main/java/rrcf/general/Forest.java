@@ -38,7 +38,7 @@ public class Forest implements Serializable {
         return String.join("\n", vals);
     }
 
-    public double getDisplacement(Object key) {
+    public double getCollusiveDisplacement(Object key) {
         double accum = 0;
         for (Tree tree : trees) {
             accum += tree.getCollusiveDisplacement(key);

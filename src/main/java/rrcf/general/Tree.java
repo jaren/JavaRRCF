@@ -109,6 +109,8 @@ public class Tree implements Serializable {
         Node right = buildTreeDown(rightP, rightI, depth + 1);
         Branch branch = new Branch(c, left, right, left.num + right.num);
         branch.point = mergeChildrenBoxes(branch);
+        left.parent = branch;
+        right.parent = branch;
         return branch;
     }
 
@@ -471,20 +473,12 @@ public class Tree implements Serializable {
 
         Node node = leaf;
         int maxResult = -1;
-        for (int i = 0; i < leaf.depth; i++) {
-            Branch parent = node.parent;
-            if (parent == null)
-                break;
-            Node sibling;
-            if (node.equals(parent.left)) {
-                sibling = parent.right;
-            } else {
-                sibling = parent.left;
-            }
+        while (node.parent != null) {
+            Node sibling = getSibling(node);
             int deleted = node.num;
             int displacement = sibling.num;
             maxResult = Math.max(maxResult, displacement / deleted);
-            node = parent;
+            node = node.parent;
         }
         return maxResult;
     }
