@@ -5,8 +5,8 @@ import java.io.Serializable;
 /**
  * Base class for nodes in a tree
  */
-public class RCNode implements Serializable {
-    public RCBranch parent;
+public class Node implements Serializable {
+    public Branch parent;
     // Represents either number of leaves or number of duplicates in a leaf
     // Representation depends on whether the node is a branch or leaf
     public int num;

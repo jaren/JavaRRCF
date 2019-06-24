@@ -1,6 +1,7 @@
 package rrcf.general;
 
 import java.util.Map;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
@@ -22,21 +23,93 @@ import java.io.Serializable;
  * International conference on machine learning, New York, NY, 2016 (pp.
  * 2712-2721).
  */
-public class RCTree implements Serializable {
-    private RCNode root;
+public class Tree implements Serializable {
+    private Node root;
     // Number of dimensions for each point
     private int ndim;
     // Allows leaves to be accessed with external key
-    private Map<Object, RCLeaf> leavesMap;
+    private Map<Object, Leaf> leavesMap;
     private Random random;
 
-    public RCTree(Random r) {
+    public Tree(Random r, double[][] points) {
         leavesMap = new HashMap<>();
         random = r;
+        if (points.length == 0) {
+            return;
+        }
+        int[] indices = new int[points.length];
+        for (int i = 0; i < points.length; i++) {
+            indices[i] = i;
+        }
+        // Has to be before tree building
+        ndim = points[0].length;
+        root = buildTreeDown(points, indices, 0);
     }
 
-    public RCTree() {
+    public Tree(double[][] points) {
+        this(new Random(), points);
+    }
+
+    public Tree(Random r) {
+        this(r, new double[0][0]);
+    }
+
+    public Tree() {
         this(new Random());
+    }
+
+    private Node buildTreeDown(double[][] points, int[] indices, int depth) {
+        // TODO: Inefficient
+        double[][] box = getBoxFromPoints(points);
+        // Check if the array is all duplicates and return a leaf if it is
+        for (int i = 0; i < box[0].length; i++) {
+            if (box[0][i] != box[box.length - 1][i]) {
+                break;
+            }
+
+            // All duplicates found
+            if (i == box[0].length - 1) {
+                Leaf leaf = new Leaf(box[0], depth);
+                leaf.num = points.length;
+                for (int d : indices) {
+                    leavesMap.put(d, leaf);
+                }
+                return leaf;
+            }
+        }
+        Cut c = insertCut(box);
+        boolean[] goesLeft = new boolean[points.length];
+        int leftSize = 0;
+        for (int i = 0; i < points.length; i++) {
+            if (points[i][c.dim] <= c.value) {
+                goesLeft[i] = true;
+                leftSize++;
+            } else {
+                goesLeft[i] = false;
+            }
+        }
+        int[] leftI = new int[leftSize];
+        double[][] leftP = new double[leftSize][points[0].length];
+        int[] rightI = new int[points.length - leftSize];
+        double[][] rightP = new double[points.length - leftSize][points[0].length];
+        int leftIndex = 0;
+        int rightIndex = 0;
+        for (int i = 0; i < points.length; i++) {
+            if (goesLeft[i]) {
+                leftI[leftIndex] = indices[i];
+                leftP[leftIndex] = points[i];
+                leftIndex++;
+            } else {
+                rightI[rightIndex] = indices[i];
+                rightP[rightIndex] = points[i];
+                rightIndex++;
+            }
+        }
+        Node left = buildTreeDown(leftP, leftI, depth + 1);
+        Node right = buildTreeDown(rightP, rightI, depth + 1);
+        Branch branch = new Branch(c, left, right, left.num + right.num);
+        branch.point = mergeChildrenBoxes(branch);
+        return branch;
     }
 
     @Override
@@ -57,7 +130,7 @@ public class RCTree implements Serializable {
      * Prints a node to provided string
      * Updates the given string array: { depth, tree } strings
      */
-    private void printNodeToString(RCNode node, String[] depthAndTreeString) {
+    private void printNodeToString(Node node, String[] depthAndTreeString) {
         Consumer<Character> ppush = (c) -> {
             String branch = String.format(" %c  ", c);
             depthAndTreeString[0] += branch;
@@ -65,10 +138,10 @@ public class RCTree implements Serializable {
         Runnable ppop = () -> {
             depthAndTreeString[0] = depthAndTreeString[0].substring(0, depthAndTreeString[0].length() - 4);
         };
-        if (node instanceof RCLeaf) {
+        if (node instanceof Leaf) {
             depthAndTreeString[1] += String.format("(%s)\n", Arrays.toString(node.point[0]));
-        } else if (node instanceof RCBranch) {
-            RCBranch b = (RCBranch)node;
+        } else if (node instanceof Branch) {
+            Branch b = (Branch)node;
             depthAndTreeString[1] += String.format("%c+ cut: (%d, %f), box: (%s, %s)\n", 9472, b.cut.dim, b.cut.value, Arrays.toString(b.point[0]), Arrays.toString(b.point[b.point.length - 1]));
             depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9500, 9472, 9472);
             ppush.accept((char) 9474);
@@ -81,15 +154,15 @@ public class RCTree implements Serializable {
         }
     }
 
-    public void mapLeaves(Consumer<RCLeaf> func) {
+    public void mapLeaves(Consumer<Leaf> func) {
         mapLeaves(func, root);
     }
 
-    private void mapLeaves(Consumer<RCLeaf> func, RCNode n) {
-        if (n instanceof RCLeaf) {
-            func.accept((RCLeaf) n);
+    private void mapLeaves(Consumer<Leaf> func, Node n) {
+        if (n instanceof Leaf) {
+            func.accept((Leaf) n);
         } else {
-            RCBranch b = (RCBranch) n;
+            Branch b = (Branch) n;
             if (b.left != null) {
                 mapLeaves(func, b.left);
             }
@@ -99,13 +172,13 @@ public class RCTree implements Serializable {
         }
     }
 
-    public void mapBranches(Consumer<RCBranch> func) {
+    public void mapBranches(Consumer<Branch> func) {
         mapBranches(func, root);
     }
 
-    private void mapBranches(Consumer<RCBranch> func, RCNode n) {
-        if (!(n instanceof RCLeaf)) {
-            RCBranch b = (RCBranch) n;
+    private void mapBranches(Consumer<Branch> func, Node n) {
+        if (!(n instanceof Leaf)) {
+            Branch b = (Branch) n;
             if (b.left != null) {
                 mapBranches(func, b.left);
             }
@@ -119,8 +192,8 @@ public class RCTree implements Serializable {
     /**
      * Delete a leaf (found from index) from the tree and return deleted node
      */
-    public RCNode forgetPoint(Object index) {
-        RCNode leaf = leavesMap.get(index);
+    public Node forgetPoint(Object index) {
+        Node leaf = leavesMap.get(index);
 
         // If duplicate points exist, decrease num for all nodes above
         if (leaf.num > 1) {
@@ -136,8 +209,8 @@ public class RCTree implements Serializable {
         }
 
         // Calculate parent and sibling
-        RCBranch parent = leaf.parent;
-        RCNode sibling = getSibling(leaf);
+        Branch parent = leaf.parent;
+        Node sibling = getSibling(leaf);
 
         // If parent is root, set sibling to root and update depths
         if (root.equals(parent)) {
@@ -149,7 +222,7 @@ public class RCTree implements Serializable {
         }
 
         // Move sibling up a layer and link nodes
-        RCBranch grandparent = parent.parent;
+        Branch grandparent = parent.parent;
         sibling.parent = grandparent;
         if (parent.equals(grandparent.left)) {
             grandparent.left = sibling;
@@ -170,10 +243,10 @@ public class RCTree implements Serializable {
     /**
      * Insert a point into the tree with a given index and create a new leaf
      */
-    public RCLeaf insertPoint(double[] point, Object index) {
+    public Leaf insertPoint(double[] point, Object index) {
         // If no points, set necessary variables
         if (root == null) {
-            RCLeaf leaf = new RCLeaf(point, 0);
+            Leaf leaf = new Leaf(point, 0);
             root = leaf;
             ndim = point.length;
             return leavesMap.put(index, leaf);
@@ -184,7 +257,7 @@ public class RCTree implements Serializable {
         assert !leavesMap.containsKey(index);
 
         // Check for duplicates and only update counts if it exists
-        RCLeaf duplicate = findLeaf(point);
+        Leaf duplicate = findLeaf(point);
         if (duplicate != null) {
             updateLeafCountUpwards(duplicate, 1);
             leavesMap.put(index, duplicate);
@@ -192,25 +265,25 @@ public class RCTree implements Serializable {
         }
 
         // No duplicates found, continue
-        RCNode node = root;
-        RCBranch parent = null;
-        RCLeaf leaf = null;
-        RCBranch branch = null;
+        Node node = root;
+        Branch parent = null;
+        Leaf leaf = null;
+        Branch branch = null;
         boolean useLeftSide = false;
         // Traverse tree until insertion spot found
         for (int i = 0; i < size(); i++) {
             double[][] bbox = node.point;
             Cut c = insertPointCut(point, bbox);
             if (c.value < bbox[0][c.dim]) {
-                leaf = new RCLeaf(point, i);
-                branch = new RCBranch(c, leaf, node, leaf.num + node.num);
+                leaf = new Leaf(point, i);
+                branch = new Branch(c, leaf, node, leaf.num + node.num);
                 break;
             } else if (c.value >= bbox[bbox.length - 1][c.dim] && point[c.dim] > c.value) {
-                leaf = new RCLeaf(point, i);
-                branch = new RCBranch(c, node, leaf, leaf.num + node.num);
+                leaf = new Leaf(point, i);
+                branch = new Branch(c, node, leaf, leaf.num + node.num);
                 break;
             } else {
-                RCBranch b = (RCBranch) node;
+                Branch b = (Branch) node;
                 parent = b;
                 if (point[b.cut.dim] <= b.cut.value) {
                     node = b.left;
@@ -248,8 +321,8 @@ public class RCTree implements Serializable {
     /**
      * Gets the sibling of a node
      */
-    private RCNode getSibling(RCNode n) {
-        RCBranch parent = n.parent;
+    private Node getSibling(Node n) {
+        Branch parent = n.parent;
         if (n.equals(parent.left)) {
             return parent.right;
         }
@@ -259,7 +332,7 @@ public class RCTree implements Serializable {
     /**
      * Increases the leaf number for all ancestors above a given node by increment
      */
-    private void updateLeafCountUpwards(RCNode node, int increment) {
+    private void updateLeafCountUpwards(Node node, int increment) {
         while (node != null) {
             node.num += increment;
             node = node.parent;
@@ -270,7 +343,7 @@ public class RCTree implements Serializable {
      * When a point is deleted, contract bounding box of nodes above point
      * If the deleted point was on the boundary for any dimension
      */
-    private void shrinkBoxUp(RCBranch node, double[] point) {
+    private void shrinkBoxUp(Branch node, double[] point) {
         while (node != null) {
             // Check if any of the current box's values match the point
             // Can exit otherwise, no shrinking necessary
@@ -291,7 +364,7 @@ public class RCTree implements Serializable {
     /**
      * When a point is inserted, expand bounding box of nodes above new point
      */
-    private void expandBoxUp(RCBranch node) {
+    private void expandBoxUp(Branch node) {
         double[][] bbox = mergeChildrenBoxes(node);
         node.point = bbox;
         node = node.parent;
@@ -317,7 +390,7 @@ public class RCTree implements Serializable {
     /**
      * Get bounding box of branch based on its children
      */
-    private double[][] mergeChildrenBoxes(RCBranch node) {
+    private double[][] mergeChildrenBoxes(Branch node) {
         double[][] box = new double[2][ndim];
         for (int i = 0; i < ndim; i++) {
             box[0][i] = Math.min(node.left.point[0][i], node.right.point[0][i]);
@@ -330,7 +403,7 @@ public class RCTree implements Serializable {
     /**
      * Adds `increment` to all leaves' depths under a node
      */
-    private void increaseLeafDepth(int increment, RCNode n) {
+    private void increaseLeafDepth(int increment, Node n) {
         mapLeaves((leaf) -> {
             leaf.depth += increment;
         }, n);
@@ -339,23 +412,23 @@ public class RCTree implements Serializable {
     /**
      * Wrapper for query from root
      */
-    public RCLeaf query(double[] point) {
+    public Leaf query(double[] point) {
         return query(point, root);
     }
 
     /**
      * Finds the closest leaf to a point under a specified node
      */
-    private RCLeaf query(double[] point, RCNode n) {
-        while (!(n instanceof RCLeaf)) {
-            RCBranch b = (RCBranch) n;
+    private Leaf query(double[] point, Node n) {
+        while (!(n instanceof Leaf)) {
+            Branch b = (Branch) n;
             if (point[b.cut.dim] <= b.cut.value) {
                 n = b.left;
             } else {
                 n = b.right;
             }
         }
-        return (RCLeaf) n;
+        return (Leaf) n;
     }
 
     /**
@@ -370,12 +443,12 @@ public class RCTree implements Serializable {
      * Removing a leaf shorts the sibling to the leaf's grandparent, so displacement is the sibling's count
      * Can serve as a measure for outliers, but is affected by masking
      */
-    public int getDisplacement(RCLeaf leaf) {
+    public int getDisplacement(Leaf leaf) {
         if (leaf.equals(root)) {
             return 0;
         }
-        RCBranch parent = leaf.parent;
-        RCNode sibling = getSibling(leaf);
+        Branch parent = leaf.parent;
+        Node sibling = getSibling(leaf);
         return sibling.num;
     }
 
@@ -391,18 +464,18 @@ public class RCTree implements Serializable {
      * In practice, there are too many subsets to consider so it can be estimated by looking up the tree
      * There is no definitive algorithm to empirically calculate codisp, so the ratio of sibling num to node num is used
      */
-    public int getCollusiveDisplacement(RCLeaf leaf) {
+    public int getCollusiveDisplacement(Leaf leaf) {
         if (leaf.equals(root)) {
             return 0;
         }
 
-        RCNode node = leaf;
+        Node node = leaf;
         int maxResult = -1;
         for (int i = 0; i < leaf.depth; i++) {
-            RCBranch parent = node.parent;
+            Branch parent = node.parent;
             if (parent == null)
                 break;
-            RCNode sibling;
+            Node sibling;
             if (node.equals(parent.left)) {
                 sibling = parent.right;
             } else {
@@ -419,37 +492,54 @@ public class RCTree implements Serializable {
     /**
      * Returns a leaf containing a point if it exists
      */
-    public RCLeaf findLeaf(double[] point) {
-        RCLeaf nearest = query(point);
+    public Leaf findLeaf(double[] point) {
+        Leaf nearest = query(point);
         if (Arrays.equals(nearest.point[0], point)) {
             return nearest;
         }
         return null;
     }
 
+    private double[][] getBoxFromPoints(double[][] points) {
+        double[][] box = new double[2][points[0].length];
+        for (int i = 0; i < points[0].length; i++) {
+            box[0][i] = Double.MAX_VALUE;
+            box[box.length - 1][i] = -Double.MAX_VALUE;
+        }
+
+        // For all dimensions
+        for (int j = 0; j < points[0].length; j++) {
+            // For all points, set box to min and max
+            for (int i = 0; i < points.length; i++) {
+                box[0][j] = Math.min(box[0][j], points[i][j]);
+                box[box.length - 1][j] = Math.max(box[box.length - 1][j], points[i][j]);
+            }
+        }
+        return box;
+    }
+
     /**
-     * Generates a random cut from the span of a point and bounding box
+     * Generates a random cut from the span of a bounding box
      */
-    private Cut insertPointCut(double[] point, double[][] bbox) {
-        double[] newMinBox = new double[bbox[0].length];
+    private Cut insertCut(double[][] bbox) {
         double[] span = new double[bbox[0].length];
         // Cumulative sum of span
         double[] spanSum = new double[bbox[0].length];
-        for (int i = 0; i < ndim; i++) {
-            newMinBox[i] = Math.min(bbox[0][i], point[i]);
-            double maxI = Math.max(bbox[bbox.length - 1][i], point[i]);
-            span[i] =  maxI - newMinBox[i];
+
+        for (int i = 0; i < bbox[0].length; i++) {
+            span[i] =  bbox[bbox.length - 1][i] - bbox[0][i];
             if (i > 0) {
                 spanSum[i] = spanSum[i - 1] + span[i];
             } else {
                 spanSum[i] = span[0];
             }
         }
+
         // Weighted random with each dimension's span
         double range = spanSum[spanSum.length - 1];
         double r = random.nextDouble() * range;
         int dimension = -1;
-        for (int i = 0; i < ndim; i++) {
+        for (int i = 0; i < bbox[0].length; i++) {
             // Finds first value greater than chosen
             if (spanSum[i] > r) {
                 dimension = i;
@@ -457,8 +547,20 @@ public class RCTree implements Serializable {
             }
         }
         assert dimension > -1;
-        double value = newMinBox[dimension] + spanSum[dimension] - r;
+        double value = bbox[0][dimension] + spanSum[dimension] - r;
         return new Cut(dimension, value);
+    }
+
+    /**
+     * Generates a random cut from the span of a point and bounding box
+     */
+    private Cut insertPointCut(double[] point, double[][] bbox) {
+        double[][] newBox = new double[2][bbox[0].length];
+        for (int i = 0; i < ndim; i++) {
+            newBox[0][i] = Math.min(bbox[0][i], point[i]);
+            newBox[newBox.length - 1][i] = Math.max(bbox[bbox.length - 1][i], point[i]);
+        }
+        return insertCut(newBox);
     }
 
     /** 

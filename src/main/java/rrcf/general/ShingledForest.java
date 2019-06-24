@@ -2,6 +2,7 @@ package rrcf.general;
 
 import java.util.Deque;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Random;
 import java.io.Serializable;
 
@@ -11,18 +12,41 @@ import java.io.Serializable;
  *  multiple one-dimensional points are added and grouped together
  *  with rolling windows
  */
-public class SimpleShingledForest extends RCForest implements Serializable {
+public class ShingledForest extends Forest implements Serializable {
     private int shingleSize;
     private Deque<Double> buffer;
 
-    public SimpleShingledForest(Random random, int shingleSize, int numTrees, int treeSize) {
-        super(random, numTrees, treeSize);
+    public ShingledForest(Random random, int shingleSize, int numTrees, int treeSize, double[] data) {
+        super(random, numTrees, treeSize, shinglePoints(shingleSize, data));
         this.shingleSize = shingleSize;
         buffer = new ArrayDeque<>();
+        for (int i = 0; i < shingleSize; i++) {
+            int d = data.length - 1 - i;
+            if (d < 0) {
+                break;
+            }
+
+            buffer.addFirst(data[d]);
+        }
     }
 
-    public SimpleShingledForest(int shingleSize, int numTrees, int treeSize) {
+    public ShingledForest(Random random, int shingleSize, int numTrees, int treeSize) {
+        this(random, shingleSize, numTrees, treeSize, new double[0]);
+    }
+
+    public ShingledForest(int shingleSize, int numTrees, int treeSize) {
         this(new Random(), shingleSize, numTrees, treeSize);
+    }
+
+    private static double[][] shinglePoints(int shingleSize, double[] data) {
+        if (data.length < shingleSize) {
+            return new double[0][shingleSize];
+        }
+        double[][] shingled = new double[data.length - shingleSize + 1][shingleSize];
+        for (int i = 0; i < data.length - shingleSize + 1; i++) {
+            System.arraycopy(data, i, shingled[i], 0, shingleSize);
+        }
+        return shingled;
     }
 
     public double addPoint(double value) {

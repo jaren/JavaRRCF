@@ -5,14 +5,14 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import rrcf.general.SimpleShingledForest;
-import rrcf.memory.RCSmallForest;
-import rrcf.memory.RCSmallTree;
+import rrcf.general.ShingledForest;
+import rrcf.memory.SmallShingledForest;
+import rrcf.memory.SmallTree;
 
-public class ShingledTreeTest {
+public class SmallTreeTest {
     @Test
     public void testAdd() {
-        RCSmallTree tree = new RCSmallTree(3);
+        SmallTree tree = new SmallTree(3);
         for (int i = 2; i < 100; i++) {
             tree.insertPoint(new double[] { i - 2, i - 1, i });
         }
@@ -35,8 +35,8 @@ public class ShingledTreeTest {
     @Test
     public void testSin() {
         // Checks that this doesn't throw
-        RCSmallForest f = new RCSmallForest(new Random(1), 2, 1, 2);
-        SimpleShingledForest f2 = new SimpleShingledForest(new Random(1), 2, 1, 2);
+        SmallShingledForest f = new SmallShingledForest(new Random(1), 2, 1, 2);
+        ShingledForest f2 = new ShingledForest(new Random(1), 2, 1, 2);
         for (double i = 0; i < 100; i += 0.1) {
             if (i > 50 && i < 60) {
                 f.addPoint(Math.sin(50) * 50);

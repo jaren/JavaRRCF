@@ -2,12 +2,12 @@ package rrcf.memory;
 
 import java.util.BitSet;
 
-import rrcf.memory.RCSmallTree.Cut;
+import rrcf.memory.SmallTree.Cut;
 
-public class RCSmallBranch extends RCSmallNode {
+public class SmallBranch extends SmallNode {
     public Cut cut;
-    public RCSmallNode left;
-    public RCSmallNode right;
+    public SmallNode left;
+    public SmallNode right;
 
     public double[] childMinPointValues;
     public double[] childMaxPointValues;
@@ -15,7 +15,7 @@ public class RCSmallBranch extends RCSmallNode {
     public BitSet childMinPointDirections;
     public BitSet childMaxPointDirections;
 
-    public RCSmallBranch(Cut c, int dimension, RCSmallNode l, RCSmallNode r, int n) {
+    public SmallBranch(Cut c, int dimension, SmallNode l, SmallNode r, int n) {
         cut = c;
         left = l;
         right = r;

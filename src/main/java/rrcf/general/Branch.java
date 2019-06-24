@@ -2,18 +2,18 @@ package rrcf.general;
 
 import java.io.Serializable;
 
-import rrcf.general.RCTree.Cut;
+import rrcf.general.Tree.Cut;
  
 /* 
  * Represents a node with two children
  * Represents a branch in a BST on [cutDimension, cutValue]
  */
-public class RCBranch extends RCNode implements Serializable {
+public class Branch extends Node implements Serializable {
     public Cut cut;
-    public RCNode left;
-    public RCNode right;
+    public Node left;
+    public Node right;
 
-    public RCBranch(Cut c, RCNode l, RCNode r, int n) {
+    public Branch(Cut c, Node l, Node r, int n) {
         cut = c;
         left = l;
         right = r;

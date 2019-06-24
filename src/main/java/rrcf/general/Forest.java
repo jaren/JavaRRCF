@@ -7,21 +7,25 @@ import java.util.Random;
  * Represents a collection of trees
  * Handles point addition and score averaging
  */
-public class RCForest implements Serializable {
-    public RCTree[] trees;
+public class Forest implements Serializable {
+    public Tree[] trees;
     private int treeSize;
     private int currentIndex;
-    
-    public RCForest(Random random, int numTrees, int size) {
-        trees = new RCTree[numTrees];
+
+    public Forest(Random random, int numTrees, int size, double[][] points) {
+        trees = new Tree[numTrees];
         for (int i = 0; i < numTrees; i++) {
-            trees[i] = new RCTree(random);
+            trees[i] = new Tree(random, points);
         }
         currentIndex = 0;
         treeSize = size;
     }
+    
+    public Forest(Random random, int numTrees, int size) {
+        this(random, numTrees, size, new double[0][0]);
+    }
 
-    public RCForest(int numTrees, int size) {
+    public Forest(int numTrees, int size) {
         this(new Random(), numTrees, size);
     }
 
@@ -34,9 +38,16 @@ public class RCForest implements Serializable {
         return String.join("\n", vals);
     }
 
+    public double getDisplacement(Object key) {
+        double accum = 0;
+        for (Tree tree : trees) {
+            accum += tree.getCollusiveDisplacement(key);
+        }
+        return accum / trees.length;
+    }
     public double addPoint(double[] point) {
         double accum = 0;
-        for (RCTree t : trees) {
+        for (Tree t : trees) {
             if (t.size() >= treeSize) {
                 t.forgetPoint(currentIndex - treeSize);
             }

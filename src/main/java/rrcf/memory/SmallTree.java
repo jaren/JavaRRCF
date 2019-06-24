@@ -8,9 +8,9 @@ import java.util.HashMap;
 import java.util.Random;
 import java.util.function.Consumer;
 
-import rrcf.memory.RCSmallBranch;
-import rrcf.memory.RCSmallLeaf;
-import rrcf.memory.RCSmallNode;
+import rrcf.memory.SmallBranch;
+import rrcf.memory.SmallLeaf;
+import rrcf.memory.SmallNode;
 
 import java.io.Serializable;
 
@@ -20,22 +20,22 @@ import java.io.Serializable;
  * 
  * Represents a single random cut tree, supporting shingled data points of one dimension
  */
-public class RCSmallTree implements Serializable {
+public class SmallTree implements Serializable {
     // TODO: Replace with floats again, find a way around imprecision
-    private RCSmallNode root;
+    private SmallNode root;
     private int dimension;
     private Random random;
     private double[] rootMinPoint;
     private double[] rootMaxPoint;
 
-    public RCSmallTree(Random r, int shingleSize) {
+    public SmallTree(Random r, int shingleSize) {
         random = r;
         dimension = shingleSize;
         rootMinPoint = null;
         rootMaxPoint = null;
     }
 
-    public RCSmallTree(int shingleSize) {
+    public SmallTree(int shingleSize) {
         this(new Random(), shingleSize);
     }
 
@@ -53,7 +53,7 @@ public class RCSmallTree implements Serializable {
      * Prints a node to provided string
      * Updates the given string array: { depth, tree } strings
      */
-    private void printNodeToString(RCSmallNode node, String[] depthAndTreeString, double[] currentMinBox, double[] currentMaxBox) {
+    private void printNodeToString(SmallNode node, String[] depthAndTreeString, double[] currentMinBox, double[] currentMaxBox) {
         Consumer<Character> ppush = (c) -> {
             String branch = String.format(" %c  ", c);
             depthAndTreeString[0] += branch;
@@ -61,10 +61,10 @@ public class RCSmallTree implements Serializable {
         Runnable ppop = () -> {
             depthAndTreeString[0] = depthAndTreeString[0].substring(0, depthAndTreeString[0].length() - 4);
         };
-        if (node instanceof RCSmallLeaf) {
+        if (node instanceof SmallLeaf) {
             depthAndTreeString[1] += String.format("(%s)\n", Arrays.toString(currentMinBox));
-        } else if (node instanceof RCSmallBranch) {
-            RCSmallBranch b = (RCSmallBranch)node;
+        } else if (node instanceof SmallBranch) {
+            SmallBranch b = (SmallBranch)node;
             double[] leftMinBox = currentMinBox.clone();
             double[] leftMaxBox = currentMaxBox.clone();
             double[] rightMinBox = currentMinBox.clone();
@@ -94,15 +94,15 @@ public class RCSmallTree implements Serializable {
         }
     }
 
-    public void mapLeaves(Consumer<RCSmallLeaf> func) {
+    public void mapLeaves(Consumer<SmallLeaf> func) {
         mapLeaves(func, root);
     }
 
-    private void mapLeaves(Consumer<RCSmallLeaf> func, RCSmallNode n) {
-        if (n instanceof RCSmallLeaf) {
-            func.accept((RCSmallLeaf) n);
+    private void mapLeaves(Consumer<SmallLeaf> func, SmallNode n) {
+        if (n instanceof SmallLeaf) {
+            func.accept((SmallLeaf) n);
         } else {
-            RCSmallBranch b = (RCSmallBranch) n;
+            SmallBranch b = (SmallBranch) n;
             if (b.left != null) {
                 mapLeaves(func, b.left);
             }
@@ -120,13 +120,13 @@ public class RCSmallTree implements Serializable {
         return rootMaxPoint.clone();
     }
 
-    public void mapBranches(Consumer<RCSmallBranch> func) {
+    public void mapBranches(Consumer<SmallBranch> func) {
         mapBranches(func, root);
     }
 
-    private void mapBranches(Consumer<RCSmallBranch> func, RCSmallNode n) {
-        if (n instanceof RCSmallBranch) {
-            RCSmallBranch b = (RCSmallBranch) n;
+    private void mapBranches(Consumer<SmallBranch> func, SmallNode n) {
+        if (n instanceof SmallBranch) {
+            SmallBranch b = (SmallBranch) n;
             if (b.left != null) {
                 mapBranches(func, b.left);
             }
@@ -140,8 +140,8 @@ public class RCSmallTree implements Serializable {
     /**
      * Delete a leaf (found from index) from the tree and return deleted node
      */
-    public RCSmallLeaf forgetPoint(double[] point) throws NoSuchElementException {
-        RCSmallLeaf leaf = findLeaf(point);
+    public SmallLeaf forgetPoint(double[] point) throws NoSuchElementException {
+        SmallLeaf leaf = findLeaf(point);
         
         if (leaf == null) {
             throw new NoSuchElementException(String.format("Point not found: %s", Arrays.toString(point)));
@@ -162,12 +162,12 @@ public class RCSmallTree implements Serializable {
         }
 
         // Calculate parent and sibling
-        RCSmallBranch parent = leaf.parent;
-        RCSmallNode sibling = getSibling(leaf);
+        SmallBranch parent = leaf.parent;
+        SmallNode sibling = getSibling(leaf);
 
         // If parent is root, set sibling to root and update depths
         if (root.equals(parent)) {
-            RCSmallBranch bRoot = (RCSmallBranch)root;
+            SmallBranch bRoot = (SmallBranch)root;
             for (int i = 0; i < dimension; i++) {
                 // If leaf made up bounding box at dimension, set to other side
                 if ((leaf.equals(parent.left)) != bRoot.childMinPointDirections.get(i)) {
@@ -188,7 +188,7 @@ public class RCSmallTree implements Serializable {
         shrinkBoxUpwards(leaf);
 
         // Move sibling up a layer and link nodes
-        RCSmallBranch grandparent = parent.parent;
+        SmallBranch grandparent = parent.parent;
         sibling.parent = grandparent;
         // In case the returned node is used somehow
         leaf.parent = null;
@@ -207,13 +207,13 @@ public class RCSmallTree implements Serializable {
     /**
      * Insert a point into the tree with a given index and create a new leaf
      */
-    public RCSmallLeaf insertPoint(double[] point) {
+    public SmallLeaf insertPoint(double[] point) {
         // Check that dimensions are consistent and index doesn't exist
         assert point.length == dimension;
 
         // If no points, set necessary variables
         if (root == null) {
-            RCSmallLeaf leaf = new RCSmallLeaf();
+            SmallLeaf leaf = new SmallLeaf();
             root = leaf;
             rootMinPoint = point.clone();
             rootMaxPoint = point.clone();
@@ -221,17 +221,17 @@ public class RCSmallTree implements Serializable {
         }
 
         // Check for duplicates and only update counts if it exists
-        RCSmallLeaf duplicate = findLeaf(point);
+        SmallLeaf duplicate = findLeaf(point);
         if (duplicate != null) {
             updateLeafCountUpwards(duplicate, 1);
             return duplicate;
         }
 
         // No duplicates found, continue
-        RCSmallNode node = root;
-        RCSmallBranch parent = null;
-        RCSmallLeaf leaf = null;
-        RCSmallBranch branch = null;
+        SmallNode node = root;
+        SmallBranch parent = null;
+        SmallLeaf leaf = null;
+        SmallBranch branch = null;
         boolean useLeftSide = false;
         double[] minPoint = rootMinPoint.clone();
         double[] maxPoint = rootMaxPoint.clone();
@@ -252,16 +252,16 @@ public class RCSmallTree implements Serializable {
             // Has to be less than because less than or equal goes to the left
             // Equal would make node go to the right, excluding some points from query
             if (c.value < minPoint[c.dim]) {
-                leaf = new RCSmallLeaf();
-                branch = new RCSmallBranch(c, dimension, leaf, node, leaf.num + node.num);
+                leaf = new SmallLeaf();
+                branch = new SmallBranch(c, dimension, leaf, node, leaf.num + node.num);
                 break;
             // Shouldn't result in going down too far because dimensions with 0 variance have a 0 probability of being chosen?
             } else if (c.value >= maxPoint[c.dim] && point[c.dim] > c.value) {
-                leaf = new RCSmallLeaf();
-                branch = new RCSmallBranch(c, dimension, node, leaf, leaf.num + node.num);
+                leaf = new SmallLeaf();
+                branch = new SmallBranch(c, dimension, node, leaf, leaf.num + node.num);
                 break;
             } else {
-                RCSmallBranch b = (RCSmallBranch) node;
+                SmallBranch b = (SmallBranch) node;
                 parent = b;
                 BitSet minSet = (BitSet)b.childMinPointDirections.clone();
                 BitSet maxSet = (BitSet)b.childMaxPointDirections.clone();
@@ -350,7 +350,7 @@ public class RCSmallTree implements Serializable {
      * Shrinks the box up the tree, starting from a node
      * Expected to be called on removal with the removed leaf
      */
-    private void shrinkBoxUpwards(RCSmallLeaf leaf) {
+    private void shrinkBoxUpwards(SmallLeaf leaf) {
         // The bits of parent's bounding box which are determined by the child
         // --> Whether or not the leaf forms the edge of the bounding box 
         BitSet minDetermined = new BitSet();
@@ -358,8 +358,8 @@ public class RCSmallTree implements Serializable {
         minDetermined.set(0, dimension);
         maxDetermined.set(0, dimension);
 
-        RCSmallBranch node = leaf.parent;
-        RCSmallNode previousNode = leaf;
+        SmallBranch node = leaf.parent;
+        SmallNode previousNode = leaf;
         double[] altMins = new double[dimension];
         Arrays.fill(altMins, Double.MAX_VALUE);
         double[] altMaxes = new double[dimension];
@@ -430,8 +430,8 @@ public class RCSmallTree implements Serializable {
     /**
      * Gets the sibling of a node
      */
-    private RCSmallNode getSibling(RCSmallNode n) {
-        RCSmallBranch parent = n.parent;
+    private SmallNode getSibling(SmallNode n) {
+        SmallBranch parent = n.parent;
         if (n.equals(parent.left)) {
             return parent.right;
         }
@@ -441,7 +441,7 @@ public class RCSmallTree implements Serializable {
     /**
      * Increases the leaf number for all ancestors above a given node by increment
      */
-    private void updateLeafCountUpwards(RCSmallNode node, int increment) {
+    private void updateLeafCountUpwards(SmallNode node, int increment) {
         while (node != null) {
             node.num += increment;
             node = node.parent;
@@ -451,13 +451,13 @@ public class RCSmallTree implements Serializable {
     /**
      * Finds the leaf corresponding to a point
      */
-    private RCSmallLeaf findLeaf(double[] point) {
-        RCSmallNode n = root;
+    private SmallLeaf findLeaf(double[] point) {
+        SmallNode n = root;
         double[] minPoint = rootMinPoint.clone();
         double[] maxPoint = rootMaxPoint.clone();
         // Traverse down tree, following cuts
-        while (!(n instanceof RCSmallLeaf)) {
-            RCSmallBranch b = (RCSmallBranch) n;
+        while (!(n instanceof SmallLeaf)) {
+            SmallBranch b = (SmallBranch) n;
             BitSet min = (BitSet)b.childMinPointDirections.clone();
             BitSet max = (BitSet)b.childMaxPointDirections.clone();
             if (point[b.cut.dim] <= b.cut.value) {
@@ -480,7 +480,7 @@ public class RCSmallTree implements Serializable {
         if (!Arrays.equals(point, minPoint) || !Arrays.equals(point, maxPoint)) {
             return null;
         }
-        return (RCSmallLeaf) n;
+        return (SmallLeaf) n;
     }
 
     /**
@@ -488,18 +488,18 @@ public class RCSmallTree implements Serializable {
      * In practice, there are too many subsets to consider so it can be estimated by looking up the tree
      * There is no definitive algorithm to empirically calculate codisp, so the ratio of sibling num to node num is used
      */
-    public int getCollusiveDisplacement(RCSmallLeaf leaf) {
+    public int getCollusiveDisplacement(SmallLeaf leaf) {
         if (leaf.equals(root)) {
             return 0;
         }
 
-        RCSmallNode node = leaf;
+        SmallNode node = leaf;
         int maxResult = -1;
         while (node != null) {
-            RCSmallBranch parent = node.parent;
+            SmallBranch parent = node.parent;
             if (parent == null)
                 break;
-            RCSmallNode sibling;
+            SmallNode sibling;
             if (node.equals(parent.left)) {
                 sibling = parent.right;
             } else {
