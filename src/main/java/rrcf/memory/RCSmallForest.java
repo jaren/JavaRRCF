@@ -13,24 +13,24 @@ import java.io.Serializable;
  * - Uses the shared buffer of points to feed into each individual leaf, which only needs to store a start index
  * - Doesn't store bounding boxes, only storing a delta at each branch (cut dim/value since bounding boxes only change by one item each time)
  */
-public class ShingledForest implements Serializable {
+public class RCSmallForest implements Serializable {
     private int shingleSize;
     private int bufferLength;
-    private ShingledTree[] trees;
+    private RCSmallTree[] trees;
     private ArrayDeque<Double> buffer;
 
-    public ShingledForest(Random random, int shingleSize, int numTrees, int treeSize) {
-        trees = new ShingledTree[numTrees];
+    public RCSmallForest(Random random, int shingleSize, int numTrees, int treeSize) {
+        trees = new RCSmallTree[numTrees];
         assert shingleSize > 1;
         bufferLength = shingleSize + treeSize - 1;
         buffer = new ArrayDeque<>(bufferLength);
         this.shingleSize = shingleSize;
         for (int i = 0; i < numTrees; i++) {
-            trees[i] = new ShingledTree(random, shingleSize);
+            trees[i] = new RCSmallTree(random, shingleSize);
         }
     }
 
-    public ShingledForest(int shingleSize, int numTrees, int treeSize) {
+    public RCSmallForest(int shingleSize, int numTrees, int treeSize) {
         this(new Random(), shingleSize, numTrees, treeSize);
     }
 
@@ -71,7 +71,7 @@ public class ShingledForest implements Serializable {
     public double addPoint(double value) {
         if (buffer.size() == bufferLength) {
             double[] oldestPoint = getFirstPoint();
-            for (ShingledTree tree : trees) {
+            for (RCSmallTree tree : trees) {
                 tree.forgetPoint(oldestPoint);
             }
             buffer.removeFirst();
@@ -82,8 +82,8 @@ public class ShingledForest implements Serializable {
         }
         double val = 0;
         double[] lastPoint = getLastPoint();
-        for (ShingledTree tree : trees) {
-            ShingledLeaf l = tree.insertPoint(lastPoint);
+        for (RCSmallTree tree : trees) {
+            RCSmallLeaf l = tree.insertPoint(lastPoint);
             val += tree.getCollusiveDisplacement(l);
         }
         return val / trees.length;

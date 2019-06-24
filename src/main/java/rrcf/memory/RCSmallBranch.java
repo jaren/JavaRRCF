@@ -2,12 +2,12 @@ package rrcf.memory;
 
 import java.util.BitSet;
 
-import rrcf.memory.ShingledTree.Cut;
+import rrcf.memory.RCSmallTree.Cut;
 
-public class ShingledBranch extends ShingledNode {
+public class RCSmallBranch extends RCSmallNode {
     public Cut cut;
-    public ShingledNode left;
-    public ShingledNode right;
+    public RCSmallNode left;
+    public RCSmallNode right;
 
     public double[] childMinPointValues;
     public double[] childMaxPointValues;
@@ -15,7 +15,7 @@ public class ShingledBranch extends ShingledNode {
     public BitSet childMinPointDirections;
     public BitSet childMaxPointDirections;
 
-    public ShingledBranch(Cut c, int dimension, ShingledNode l, ShingledNode r, int n) {
+    public RCSmallBranch(Cut c, int dimension, RCSmallNode l, RCSmallNode r, int n) {
         cut = c;
         left = l;
         right = r;

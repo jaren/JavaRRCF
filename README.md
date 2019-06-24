@@ -16,8 +16,7 @@
  * Memory-optimized version of RRCF (storing only delta bounding boxes and using a shared buffer for shingled points)
  * Less time efficient
  * Decreases memory usage by about 40%
- * Intended for use with single-dimensional data
- * Automatically handles data shingling
+ * Intended for use with shingled single-dimensional data
 ### General package:
  * Includes generalized versions of Random Cut Trees and Random Cut Forests
  * Essentially the same as kLabUM/rrcf

@@ -12,8 +12,8 @@ import org.junit.Test;
 
 import rrcf.general.RCTree;
 import rrcf.general.SimpleShingledForest;
-import rrcf.memory.ShingledForest;
-import rrcf.memory.ShingledTree;
+import rrcf.memory.RCSmallForest;
+import rrcf.memory.RCSmallTree;
 
 public class TreeComparisonTest {
     @Test
@@ -33,7 +33,7 @@ public class TreeComparisonTest {
     private void testWithNum(Random rTest, long randomSeed, int numTrees, int treeSize, int shingleSize, int numInserts) {
         System.out.printf("Testing with (seed %d, trees %d, treeSize %d, shingleSize %d)\n", randomSeed, numTrees,
                 treeSize, shingleSize);
-        ShingledForest testUnknown = new ShingledForest(new Random(randomSeed), shingleSize, numTrees, treeSize);
+        RCSmallForest testUnknown = new RCSmallForest(new Random(randomSeed), shingleSize, numTrees, treeSize);
         SimpleShingledForest testVerify = new SimpleShingledForest(new Random(randomSeed), shingleSize, numTrees, treeSize);
         for (int e = 0; e < numInserts; e++) {
             double val = rTest.nextDouble() * 1000;
@@ -56,7 +56,7 @@ public class TreeComparisonTest {
         int shingleSize = rTest.nextInt(5) + 2;
         int iters = rTest.nextInt(1000) + 100;
         int maxTreeSize = rTest.nextInt(10) + 10;
-        ShingledTree testUnknown = new ShingledTree(new Random(randomSeed), shingleSize);
+        RCSmallTree testUnknown = new RCSmallTree(new Random(randomSeed), shingleSize);
         RCTree testVerify = new RCTree(new Random(randomSeed));
         Map<Integer, double[]> points = new HashMap<>();
         // Technically not using shingling for points

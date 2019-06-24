@@ -5,7 +5,7 @@ import java.util.Random;
 import java.util.Scanner;
 
 import rrcf.general.SimpleShingledForest;
-import rrcf.memory.ShingledForest;
+import rrcf.memory.RCSmallForest;
 
 /**
  * Reads numbers from stdin
@@ -31,7 +31,7 @@ public class ShingleCsv {
         if (useSimple) {
             forest = new SimpleShingledForest(random, shingleSize, numTrees, treeSize);
         } else {
-            forest = new ShingledForest(random, shingleSize, numTrees, treeSize);
+            forest = new RCSmallForest(random, shingleSize, numTrees, treeSize);
         }
 
         Scanner input = new Scanner(System.in);
@@ -43,7 +43,7 @@ public class ShingleCsv {
             if (useSimple) {
                 score = ((SimpleShingledForest)forest).addPoint(val);
             } else {
-                score = ((ShingledForest)forest).addPoint(val);
+                score = ((RCSmallForest)forest).addPoint(val);
             }
             if (outputMemory) {
                 System.out.printf("%d,%f,%d\n", i, val, Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
