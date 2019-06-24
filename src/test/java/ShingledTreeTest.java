@@ -5,13 +5,14 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import rrcf.ShingledForest;
-import rrcf.RandomCutTree;
+import rrcf.general.SimpleShingledForest;
+import rrcf.memory.ShingledForest;
+import rrcf.memory.ShingledTree;
 
-public class TreeTest {
+public class ShingledTreeTest {
     @Test
     public void testAdd() {
-        RandomCutTree tree = new RandomCutTree(3);
+        ShingledTree tree = new ShingledTree(3);
         for (int i = 2; i < 100; i++) {
             tree.insertPoint(new double[] { i - 2, i - 1, i });
         }
@@ -35,11 +36,14 @@ public class TreeTest {
     public void testSin() {
         // Checks that this doesn't throw
         ShingledForest f = new ShingledForest(new Random(1), 2, 1, 2);
+        SimpleShingledForest f2 = new SimpleShingledForest(new Random(1), 2, 1, 2);
         for (double i = 0; i < 100; i += 0.1) {
             if (i > 50 && i < 60) {
                 f.addPoint(Math.sin(50) * 50);
+                f2.addPoint(Math.sin(50) * 50);
             } else {
                 f.addPoint(Math.sin(i) * 50);
+                f2.addPoint(Math.sin(i) * 50);
             }
         }
     }

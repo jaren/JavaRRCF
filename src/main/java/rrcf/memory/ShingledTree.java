@@ -1,4 +1,4 @@
-package rrcf;
+package rrcf.memory;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -8,9 +8,9 @@ import java.util.HashMap;
 import java.util.Random;
 import java.util.function.Consumer;
 
-import rrcf.Branch;
-import rrcf.Leaf;
-import rrcf.Node;
+import rrcf.memory.ShingledBranch;
+import rrcf.memory.ShingledLeaf;
+import rrcf.memory.ShingledNode;
 
 import java.io.Serializable;
 
@@ -20,22 +20,22 @@ import java.io.Serializable;
  * 
  * Represents a single random cut tree, supporting shingled data points of one dimension
  */
-public class RandomCutTree implements Serializable {
+public class ShingledTree implements Serializable {
     // TODO: Replace with floats again, find a way around imprecision
-    private Node root;
+    private ShingledNode root;
     private int dimension;
     private Random random;
     private double[] rootMinPoint;
     private double[] rootMaxPoint;
 
-    public RandomCutTree(Random r, int shingleSize) {
+    public ShingledTree(Random r, int shingleSize) {
         random = r;
         dimension = shingleSize;
         rootMinPoint = null;
         rootMaxPoint = null;
     }
 
-    public RandomCutTree(int shingleSize) {
+    public ShingledTree(int shingleSize) {
         this(new Random(), shingleSize);
     }
 
@@ -53,7 +53,7 @@ public class RandomCutTree implements Serializable {
      * Prints a node to provided string
      * Updates the given string array: { depth, tree } strings
      */
-    private void printNodeToString(Node node, String[] depthAndTreeString, double[] currentMinBox, double[] currentMaxBox) {
+    private void printNodeToString(ShingledNode node, String[] depthAndTreeString, double[] currentMinBox, double[] currentMaxBox) {
         Consumer<Character> ppush = (c) -> {
             String branch = String.format(" %c  ", c);
             depthAndTreeString[0] += branch;
@@ -61,10 +61,10 @@ public class RandomCutTree implements Serializable {
         Runnable ppop = () -> {
             depthAndTreeString[0] = depthAndTreeString[0].substring(0, depthAndTreeString[0].length() - 4);
         };
-        if (node instanceof Leaf) {
+        if (node instanceof ShingledLeaf) {
             depthAndTreeString[1] += String.format("(%s)\n", Arrays.toString(currentMinBox));
-        } else if (node instanceof Branch) {
-            Branch b = (Branch)node;
+        } else if (node instanceof ShingledBranch) {
+            ShingledBranch b = (ShingledBranch)node;
             double[] leftMinBox = currentMinBox.clone();
             double[] leftMaxBox = currentMaxBox.clone();
             double[] rightMinBox = currentMinBox.clone();
@@ -94,15 +94,15 @@ public class RandomCutTree implements Serializable {
         }
     }
 
-    public void mapLeaves(Consumer<Leaf> func) {
+    public void mapLeaves(Consumer<ShingledLeaf> func) {
         mapLeaves(func, root);
     }
 
-    private void mapLeaves(Consumer<Leaf> func, Node n) {
-        if (n instanceof Leaf) {
-            func.accept((Leaf) n);
+    private void mapLeaves(Consumer<ShingledLeaf> func, ShingledNode n) {
+        if (n instanceof ShingledLeaf) {
+            func.accept((ShingledLeaf) n);
         } else {
-            Branch b = (Branch) n;
+            ShingledBranch b = (ShingledBranch) n;
             if (b.left != null) {
                 mapLeaves(func, b.left);
             }
@@ -120,13 +120,13 @@ public class RandomCutTree implements Serializable {
         return rootMaxPoint.clone();
     }
 
-    public void mapBranches(Consumer<Branch> func) {
+    public void mapBranches(Consumer<ShingledBranch> func) {
         mapBranches(func, root);
     }
 
-    private void mapBranches(Consumer<Branch> func, Node n) {
-        if (n instanceof Branch) {
-            Branch b = (Branch) n;
+    private void mapBranches(Consumer<ShingledBranch> func, ShingledNode n) {
+        if (n instanceof ShingledBranch) {
+            ShingledBranch b = (ShingledBranch) n;
             if (b.left != null) {
                 mapBranches(func, b.left);
             }
@@ -140,8 +140,8 @@ public class RandomCutTree implements Serializable {
     /**
      * Delete a leaf (found from index) from the tree and return deleted node
      */
-    public Leaf forgetPoint(double[] point) throws NoSuchElementException {
-        Leaf leaf = findLeaf(point);
+    public ShingledLeaf forgetPoint(double[] point) throws NoSuchElementException {
+        ShingledLeaf leaf = findLeaf(point);
         
         if (leaf == null) {
             throw new NoSuchElementException(String.format("Point not found: %s", Arrays.toString(point)));
@@ -162,12 +162,12 @@ public class RandomCutTree implements Serializable {
         }
 
         // Calculate parent and sibling
-        Branch parent = leaf.parent;
-        Node sibling = getSibling(leaf);
+        ShingledBranch parent = leaf.parent;
+        ShingledNode sibling = getSibling(leaf);
 
         // If parent is root, set sibling to root and update depths
         if (root.equals(parent)) {
-            Branch bRoot = (Branch)root;
+            ShingledBranch bRoot = (ShingledBranch)root;
             for (int i = 0; i < dimension; i++) {
                 // If leaf made up bounding box at dimension, set to other side
                 if ((leaf.equals(parent.left)) != bRoot.childMinPointDirections.get(i)) {
@@ -188,7 +188,7 @@ public class RandomCutTree implements Serializable {
         shrinkBoxUpwards(leaf);
 
         // Move sibling up a layer and link nodes
-        Branch grandparent = parent.parent;
+        ShingledBranch grandparent = parent.parent;
         sibling.parent = grandparent;
         // In case the returned node is used somehow
         leaf.parent = null;
@@ -207,13 +207,13 @@ public class RandomCutTree implements Serializable {
     /**
      * Insert a point into the tree with a given index and create a new leaf
      */
-    public Leaf insertPoint(double[] point) {
+    public ShingledLeaf insertPoint(double[] point) {
         // Check that dimensions are consistent and index doesn't exist
         assert point.length == dimension;
 
         // If no points, set necessary variables
         if (root == null) {
-            Leaf leaf = new Leaf();
+            ShingledLeaf leaf = new ShingledLeaf();
             root = leaf;
             rootMinPoint = point.clone();
             rootMaxPoint = point.clone();
@@ -221,17 +221,17 @@ public class RandomCutTree implements Serializable {
         }
 
         // Check for duplicates and only update counts if it exists
-        Leaf duplicate = findLeaf(point);
+        ShingledLeaf duplicate = findLeaf(point);
         if (duplicate != null) {
             updateLeafCountUpwards(duplicate, 1);
             return duplicate;
         }
 
         // No duplicates found, continue
-        Node node = root;
-        Branch parent = null;
-        Leaf leaf = null;
-        Branch branch = null;
+        ShingledNode node = root;
+        ShingledBranch parent = null;
+        ShingledLeaf leaf = null;
+        ShingledBranch branch = null;
         boolean useLeftSide = false;
         double[] minPoint = rootMinPoint.clone();
         double[] maxPoint = rootMaxPoint.clone();
@@ -252,16 +252,16 @@ public class RandomCutTree implements Serializable {
             // Has to be less than because less than or equal goes to the left
             // Equal would make node go to the right, excluding some points from query
             if (c.value < minPoint[c.dim]) {
-                leaf = new Leaf();
-                branch = new Branch(c, dimension, leaf, node, leaf.num + node.num);
+                leaf = new ShingledLeaf();
+                branch = new ShingledBranch(c, dimension, leaf, node, leaf.num + node.num);
                 break;
             // Shouldn't result in going down too far because dimensions with 0 variance have a 0 probability of being chosen?
             } else if (c.value >= maxPoint[c.dim] && point[c.dim] > c.value) {
-                leaf = new Leaf();
-                branch = new Branch(c, dimension, node, leaf, leaf.num + node.num);
+                leaf = new ShingledLeaf();
+                branch = new ShingledBranch(c, dimension, node, leaf, leaf.num + node.num);
                 break;
             } else {
-                Branch b = (Branch) node;
+                ShingledBranch b = (ShingledBranch) node;
                 parent = b;
                 BitSet minSet = (BitSet)b.childMinPointDirections.clone();
                 BitSet maxSet = (BitSet)b.childMaxPointDirections.clone();
@@ -350,7 +350,7 @@ public class RandomCutTree implements Serializable {
      * Shrinks the box up the tree, starting from a node
      * Expected to be called on removal with the removed leaf
      */
-    private void shrinkBoxUpwards(Leaf leaf) {
+    private void shrinkBoxUpwards(ShingledLeaf leaf) {
         // The bits of parent's bounding box which are determined by the child
         // --> Whether or not the leaf forms the edge of the bounding box 
         BitSet minDetermined = new BitSet();
@@ -358,8 +358,8 @@ public class RandomCutTree implements Serializable {
         minDetermined.set(0, dimension);
         maxDetermined.set(0, dimension);
 
-        Branch node = leaf.parent;
-        Node previousNode = leaf;
+        ShingledBranch node = leaf.parent;
+        ShingledNode previousNode = leaf;
         double[] altMins = new double[dimension];
         Arrays.fill(altMins, Double.MAX_VALUE);
         double[] altMaxes = new double[dimension];
@@ -430,8 +430,8 @@ public class RandomCutTree implements Serializable {
     /**
      * Gets the sibling of a node
      */
-    private Node getSibling(Node n) {
-        Branch parent = n.parent;
+    private ShingledNode getSibling(ShingledNode n) {
+        ShingledBranch parent = n.parent;
         if (n.equals(parent.left)) {
             return parent.right;
         }
@@ -441,7 +441,7 @@ public class RandomCutTree implements Serializable {
     /**
      * Increases the leaf number for all ancestors above a given node by increment
      */
-    private void updateLeafCountUpwards(Node node, int increment) {
+    private void updateLeafCountUpwards(ShingledNode node, int increment) {
         while (node != null) {
             node.num += increment;
             node = node.parent;
@@ -451,13 +451,13 @@ public class RandomCutTree implements Serializable {
     /**
      * Finds the leaf corresponding to a point
      */
-    private Leaf findLeaf(double[] point) {
-        Node n = root;
+    private ShingledLeaf findLeaf(double[] point) {
+        ShingledNode n = root;
         double[] minPoint = rootMinPoint.clone();
         double[] maxPoint = rootMaxPoint.clone();
         // Traverse down tree, following cuts
-        while (!(n instanceof Leaf)) {
-            Branch b = (Branch) n;
+        while (!(n instanceof ShingledLeaf)) {
+            ShingledBranch b = (ShingledBranch) n;
             BitSet min = (BitSet)b.childMinPointDirections.clone();
             BitSet max = (BitSet)b.childMaxPointDirections.clone();
             if (point[b.cut.dim] <= b.cut.value) {
@@ -480,7 +480,7 @@ public class RandomCutTree implements Serializable {
         if (!Arrays.equals(point, minPoint) || !Arrays.equals(point, maxPoint)) {
             return null;
         }
-        return (Leaf) n;
+        return (ShingledLeaf) n;
     }
 
     /**
@@ -488,18 +488,18 @@ public class RandomCutTree implements Serializable {
      * In practice, there are too many subsets to consider so it can be estimated by looking up the tree
      * There is no definitive algorithm to empirically calculate codisp, so the ratio of sibling num to node num is used
      */
-    public int getCollusiveDisplacement(Leaf leaf) {
+    public int getCollusiveDisplacement(ShingledLeaf leaf) {
         if (leaf.equals(root)) {
             return 0;
         }
 
-        Node node = leaf;
+        ShingledNode node = leaf;
         int maxResult = -1;
         while (node != null) {
-            Branch parent = node.parent;
+            ShingledBranch parent = node.parent;
             if (parent == null)
                 break;
-            Node sibling;
+            ShingledNode sibling;
             if (node.equals(parent.left)) {
                 sibling = parent.right;
             } else {
