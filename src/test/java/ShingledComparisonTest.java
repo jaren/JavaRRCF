@@ -11,11 +11,14 @@ import rrcf.general.ShingledForest;
 public class ShingledComparisonTest {
     @Test
     public void testShingled() {
-        double[] dat = new double[] { 1, 2, 3, 4, 5 };
+        double[] dat = new double[] { 1, 2, 3, 3, 3, 4, 5 };
         ShingledForest sForest = new ShingledForest(new Random(1), 2, 1, 20, dat);
+        assertEquals(6, sForest.trees[0].size());
         double[][] noShingleDat = new double[][] {
             { 1, 2 },
             { 2, 3 },
+            { 3, 3 },
+            { 3, 3 },
             { 3, 4 },
             { 4, 5 }
         };
