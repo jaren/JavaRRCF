@@ -1,6 +1,8 @@
 package rrcf.memory;
 
-public class SmallLeaf extends SmallNode {
+import java.io.Serializable;
+
+public class SmallLeaf extends SmallNode implements Serializable {
     // Point is stored implicitly by traversing root's bounding box down to the leaf
 
     public SmallLeaf() {

@@ -1,6 +1,8 @@
 package rrcf.memory;
 
-public class SmallNode {
+import java.io.Serializable;
+
+public class SmallNode implements Serializable {
     public SmallBranch parent;
     public int num;
 }

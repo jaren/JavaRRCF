@@ -1,10 +1,11 @@
 package rrcf.memory;
 
+import java.io.Serializable;
 import java.util.BitSet;
 
 import rrcf.memory.SmallTree.Cut;
 
-public class SmallBranch extends SmallNode {
+public class SmallBranch extends SmallNode implements Serializable {
     public Cut cut;
     public SmallNode left;
     public SmallNode right;

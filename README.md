@@ -12,15 +12,15 @@
   - Handles duplicates which would mask outliers
 
 ## Usage
-### Memory package:
- * Memory-optimized version of RRCF (storing only delta bounding boxes and using a shared buffer for shingled points)
- * Less time efficient
- * Decreases memory usage by about 40%
- * Intended for use with shingled single-dimensional data
 ### General package:
  * Includes generalized versions of Random Cut Trees and Random Cut Forests
  * Essentially the same as kLabUM/rrcf
  * Supports multidimensional data
+### Memory package:
+ * Decreases minimum memory usage by about 40%, unclear how this actually affects limitations in practice though
+ * Attempted memory-optimized version of RRCF (storing only delta bounding boxes and using a shared buffer for shingled points)
+ * Less time efficient
+ * Intended for use with shingled single-dimensional data
 
 ## Sample run command (with Numenta anomaly benchmark taxi data):
 ```mvn package -DskipTests && curl https://raw.githubusercontent.com/numenta/NAB/master/data/realKnownCause/nyc_taxi.csv | tail -n +2 | awk -F',' '{print $2}' | time bash -c "java -cp target/rrcf-1.0.jar rrcf.ShingleCsv false false 48 200 1000 1234 > ~/Downloads/output.csv"```

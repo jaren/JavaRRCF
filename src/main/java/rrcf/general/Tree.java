@@ -560,7 +560,7 @@ public class Tree implements Serializable {
     /** 
      * Java doesn't have tuples :(
      */
-    public static class Cut {
+    public static class Cut implements Serializable {
         // Dimension of cut
         public int dim;
         // Value of cut
