@@ -45,6 +45,7 @@ public class Forest implements Serializable {
         }
         return accum / trees.length;
     }
+
     public double addPoint(double[] point) {
         double accum = 0;
         for (Tree t : trees) {
