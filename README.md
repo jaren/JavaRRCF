@@ -16,7 +16,8 @@
  * Includes generalized versions of Random Cut Trees and Random Cut Forests
  * Essentially the same as kLabUM/rrcf
  * Supports multidimensional data
-### Memory package (experimental):
+
+### Memory package (deprecated):
  * Theoretically decreases minimum memory usage by about 40%, unclear how this actually affects the numbers in practice though
  * Attempted memory-optimized version of RRCF (storing only delta bounding boxes and using a shared buffer for shingled points)
  * Less time efficient

@@ -8,11 +8,11 @@ import java.util.Random;
 import java.io.Serializable;
 
 /**
- * Memory-optimized version of ShingledForest
- * - Stores a shared buffer of all points for all trees so trees don't duplicate data
- * - Uses the shared buffer of points to feed into each individual leaf, which only needs to store a start index
- * - Doesn't store bounding boxes, only storing a delta at each branch (cut dim/value since bounding boxes only change by one item each time)
+ * NOTE: Doesn't seem to actually matter much in practice
+ * This class should probably not be used
+ * @deprecated
  */
+@Deprecated
 public class SmallShingledForest implements Serializable {
     private int shingleSize;
     private int bufferLength;

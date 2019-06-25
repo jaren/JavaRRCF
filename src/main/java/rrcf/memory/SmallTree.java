@@ -18,10 +18,17 @@ import java.io.Serializable;
  * Robust random cut tree data structure used for anomaly detection on streaming
  * data
  * 
- * Represents a single random cut tree, supporting shingled data points of one dimension
+ * Memory-optimized version of ShingledTree
+ * - Doesn't store bounding boxes, only storing a delta at each branch (cut dim/value since bounding boxes only change by one item each time)
+ * - Don't store individual leaf points, they're calculated implicitly by traversing down the tree
+ * 
+ * NOTE: Memory optimizations don't seem to affect much in practice
+ * 
+ * Represents a single random cut tree
+ * @deprecated
  */
+@Deprecated
 public class SmallTree implements Serializable {
-    // TODO: Replace with floats again, find a way around imprecision
     private SmallNode root;
     private int dimension;
     private Random random;

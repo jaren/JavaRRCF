@@ -21,7 +21,7 @@ public class ShingleCsv {
             System.out.println("Provided: " + Arrays.toString(args));
             System.exit(1);
         }
-        boolean useSmall = Boolean.parseBoolean(args[0]);
+        boolean useStreaming = Boolean.parseBoolean(args[0]);
         int shingleSize = Integer.parseInt(args[1]);
         int numTrees = Integer.parseInt(args[2]);
         int treeSize = Integer.parseInt(args[3]);
@@ -29,9 +29,9 @@ public class ShingleCsv {
 
         System.out.println("\"x\",\"y\",\"value\"");
         Scanner input = new Scanner(System.in);
-        if (useSmall) {
-            // Streaming
-            SmallShingledForest forest = new SmallShingledForest(random, shingleSize, numTrees, treeSize);
+        if (useStreaming) {
+            // Streaming calculations
+            ShingledForest forest = new ShingledForest(random, shingleSize, numTrees, treeSize);
             int i = 0;
             while (input.hasNextLine()) {
                 double val = Double.parseDouble(input.nextLine());
@@ -39,9 +39,8 @@ public class ShingleCsv {
                 System.out.printf("%d,%f,%f\n", i, val, score);
                 i++;
             }
-            input.close();
         } else {
-            // Batch
+            // Batch calculations
             ArrayList<Double> arr = new ArrayList<>();
             while (input.hasNextLine()) {
                 arr.add(Double.parseDouble(input.nextLine()));
@@ -56,6 +55,5 @@ public class ShingleCsv {
                 System.out.printf("%d,%f,%f\n", i, a[i + shingleSize], forest.getCollusiveDisplacement(i));
             }
         }
-
     }
 }

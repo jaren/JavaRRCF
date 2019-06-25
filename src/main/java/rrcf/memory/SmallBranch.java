@@ -5,6 +5,7 @@ import java.util.BitSet;
 
 import rrcf.memory.SmallTree.Cut;
 
+@Deprecated
 public class SmallBranch extends SmallNode implements Serializable {
     public Cut cut;
     public SmallNode left;

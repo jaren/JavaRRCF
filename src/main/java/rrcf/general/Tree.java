@@ -59,7 +59,7 @@ public class Tree implements Serializable {
     }
 
     private Node buildTreeDown(double[][] points, int[] indices, int depth) {
-        // TODO: Inefficient
+        // TODO: Somewhat inefficient, potentially improve?
         double[][] box = getBoxFromPoints(points);
         // Check if the array is all duplicates and return a leaf if it is
         for (int i = 0; i < box[0].length; i++) {
