@@ -23,23 +23,30 @@ public class TreeSizeBenchmark {
                         small.addPoint(d);
                         normal.addPoint(d);
                     }
+                    System.out.println("=======================================");
                     System.out.printf("Running with (%d, %d, %d)\n", shingle, trees, size);
+
                     ByteArrayOutputStream b = new ByteArrayOutputStream();
                     ObjectOutputStream o = new ObjectOutputStream(b);
+                    o.writeObject(small);
+                    System.out.printf("\nSmall: %d --> %f\n", b.size(), b.size() / (double)(trees * shingle * size));
+                    b.reset();
                     GZIPOutputStream zip = new GZIPOutputStream(b);
                     ObjectOutputStream zipO = new ObjectOutputStream(zip);
-                    o.writeObject(small);
-                    System.out.printf("Small: %d --> %f\n", b.size(), b.size() / (double)(trees * shingle * size));
-                    b.reset();
                     zipO.writeObject(small);
+                    zip.close();
                     System.out.printf("Small GZipped: %d --> %f\n", b.size(), b.size() / (double)(trees * shingle * size));
                     b.reset();
                     o.writeObject(normal);
-                    System.out.printf("Normal: %d --> %f\n", b.size(), b.size() / (double)(trees * shingle * size));
+                    System.out.printf("\nNormal: %d --> %f\n", b.size(), b.size() / (double)(trees * shingle * size));
                     b.reset();
+                    zip = new GZIPOutputStream(b);
+                    zipO = new ObjectOutputStream(zip);
                     zipO.writeObject(normal);
+                    zip.close();
                     System.out.printf("Normal GZipped: %d --> %f\n", b.size(), b.size() / (double)(trees * shingle * size));
                     o.close();
+                    System.out.println("=======================================\n");
                 }
             }
         }
