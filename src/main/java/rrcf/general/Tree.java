@@ -276,11 +276,11 @@ public class Tree implements Serializable {
         for (int i = 0; i < size(); i++) {
             double[][] bbox = node.point;
             Cut c = insertPointCut(point, bbox);
-            if (c.value < bbox[0][c.dim]) {
+            if (c.value <= bbox[0][c.dim]) {
                 leaf = new Leaf(point, i);
                 branch = new Branch(c, leaf, node, leaf.num + node.num);
                 break;
-            } else if (c.value >= bbox[bbox.length - 1][c.dim] && point[c.dim] > c.value) {
+            } else if (c.value >= bbox[bbox.length - 1][c.dim]) {
                 leaf = new Leaf(point, i);
                 branch = new Branch(c, node, leaf, leaf.num + node.num);
                 break;
