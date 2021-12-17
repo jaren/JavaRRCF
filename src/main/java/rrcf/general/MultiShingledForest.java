@@ -1,4 +1,4 @@
-package rrcf;
+package rrcf.general;
 
 import java.util.Deque;
 import java.util.ArrayDeque;
