@@ -18,16 +18,20 @@ import java.io.Serializable;
  * Robust random cut tree data structure used for anomaly detection on streaming
  * data
  * 
- * Memory-optimized version of ShingledTree
+ * Represents a single random cut tree, supporting generalized data points of any dimension
+ * Memory-optimized version of general/Tree
  * - Doesn't store bounding boxes, only storing a delta at each branch (cut dim/value since bounding boxes only change by one item each time)
  * - Don't store individual leaf points, they're calculated implicitly by traversing down the tree
  * 
- * NOTE: Memory optimizations don't seem to affect much in practice
+ * Modified from: rrcf: Implementation of the Robust Random Cut Forest algorithm
+ * for anomaly detection on streams Matthew D. Bartos1, Abhiram Mullapudi1, and
+ * Sara C. Troutman
  * 
- * Represents a single random cut tree
- * @deprecated
+ * Original paper: S. Guha, N. Mishra, G. Roy, & O. Schrijvers. Robust random
+ * cut forest based anomaly detection on streams, in Proceedings of the 33rd
+ * International conference on machine learning, New York, NY, 2016 (pp.
+ * 2712-2721).
  */
-@Deprecated
 public class SmallTree implements Serializable {
     private SmallNode root;
     private int dimension;
@@ -100,7 +104,10 @@ public class SmallTree implements Serializable {
             ppop.run();
         }
     }
-
+	
+    /**
+     * Apply function to all leaves (nodes with no children)
+     */
     public void mapLeaves(Consumer<SmallLeaf> func) {
         mapLeaves(func, root);
     }
@@ -127,6 +134,9 @@ public class SmallTree implements Serializable {
         return rootMaxPoint.clone();
     }
 
+    /**
+     * Apply function to all branches (nodes with two children)
+     */
     public void mapBranches(Consumer<SmallBranch> func) {
         mapBranches(func, root);
     }
@@ -160,7 +170,7 @@ public class SmallTree implements Serializable {
             return leaf;
         }
 
-        // If leaf is root
+        // If leaf is root, clear the tree
         if (root.equals(leaf)) {
             root = null;
             rootMinPoint = null;
@@ -435,7 +445,7 @@ public class SmallTree implements Serializable {
     }
 
     /**
-     * Gets the sibling of a node
+     * Gets the sibling of a node (other child of its parent)
      */
     private SmallNode getSibling(SmallNode n) {
         SmallBranch parent = n.parent;
@@ -555,7 +565,7 @@ public class SmallTree implements Serializable {
     }
 
     /** 
-     * Java doesn't have tuples :(
+     * Helper class representing a cut point along some dimension
      */
     public static class Cut implements Serializable {
         // Dimension of cut
