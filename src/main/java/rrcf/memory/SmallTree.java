@@ -18,27 +18,34 @@ import java.io.Serializable;
  * Robust random cut tree data structure used for anomaly detection on streaming
  * data
  * 
- * Represents a single random cut tree, supporting generalized data points of any dimension
- * Memory-optimized version of general/Tree
+ * Memory-optimized version of general.Tree
  * - Doesn't store bounding boxes, only storing a delta at each branch (cut dim/value since bounding boxes only change by one item each time)
  * - Don't store individual leaf points, they're calculated implicitly by traversing down the tree
  * 
  * Modified from: rrcf: Implementation of the Robust Random Cut Forest algorithm
  * for anomaly detection on streams Matthew D. Bartos1, Abhiram Mullapudi1, and
  * Sara C. Troutman
- * 
+ *
  * Original paper: S. Guha, N. Mishra, G. Roy, & O. Schrijvers. Robust random
  * cut forest based anomaly detection on streams, in Proceedings of the 33rd
  * International conference on machine learning, New York, NY, 2016 (pp.
  * 2712-2721).
+
  */
 public class SmallTree implements Serializable {
     private SmallNode root;
     private int dimension;
     private Random random;
-    private double[] rootMinPoint;
-    private double[] rootMaxPoint;
+    private double[] rootMinPoint; // Global minimum bounds for the entire tree
+    private double[] rootMaxPoint; // Global maximum bounds for the entire tree
 
+    /**
+     * Constructs a SmallTree with specified random generator and shingle size.
+     * The shingle size determines the dimensionality of the data points.
+     * 
+     * @param r Random generator for making random cuts in the tree
+     * @param shingleSize Number of dimensions in each data point
+     */
     public SmallTree(Random r, int shingleSize) {
         random = r;
         dimension = shingleSize;
@@ -46,13 +53,24 @@ public class SmallTree implements Serializable {
         rootMaxPoint = null;
     }
 
+    /**
+     * Constructs a SmallTree with default random generator and specified shingle size.
+     * 
+     * @param shingleSize Number of dimensions in each data point
+     */
     public SmallTree(int shingleSize) {
         this(new Random(), shingleSize);
     }
 
+    /**
+     * Creates a string representation of the tree structure for debugging/visualization.
+     * Shows the tree hierarchy with cuts, bounding boxes, and leaf nodes.
+     * 
+     * @return String representation of the tree structure
+     */
     @Override
     public String toString() {
-        String[] depthAndTreeString = { "", "" };
+        String[] depthAndTreeString = { "", "" }; // [0] = depth indentation, [1] = tree structure
         if (root == null) return "";
         double[] currentMinBox = rootMinPoint.clone();
         double[] currentMaxBox = rootMaxPoint.clone();
@@ -61,26 +79,40 @@ public class SmallTree implements Serializable {
     }
 
     /**
-     * Prints a node to provided string
+     * Recursively prints a node and its subtree to the provided string array.
+     * Uses Unicode box-drawing characters to create a visual tree structure.
      * Updates the given string array: { depth, tree } strings
+     * 
+     * @param node Current node being printed
+     * @param depthAndTreeString Array containing depth indentation and tree string
+     * @param currentMinBox Current minimum bounding box at this level
+     * @param currentMaxBox Current maximum bounding box at this level
      */
     private void printNodeToString(SmallNode node, String[] depthAndTreeString, double[] currentMinBox, double[] currentMaxBox) {
+        // Lambda for adding branch indentation
         Consumer<Character> ppush = (c) -> {
             String branch = String.format(" %c  ", c);
             depthAndTreeString[0] += branch;
         };
+        // Lambda for removing branch indentation
         Runnable ppop = () -> {
             depthAndTreeString[0] = depthAndTreeString[0].substring(0, depthAndTreeString[0].length() - 4);
         };
+        
         if (node instanceof SmallLeaf) {
+            // For leaves, print the bounding box (which represents the point location)
             depthAndTreeString[1] += String.format("(%s)\n", Arrays.toString(currentMinBox));
         } else if (node instanceof SmallBranch) {
             SmallBranch b = (SmallBranch)node;
+            // Calculate bounding boxes for left and right children
             double[] leftMinBox = currentMinBox.clone();
             double[] leftMaxBox = currentMaxBox.clone();
             double[] rightMinBox = currentMinBox.clone();
             double[] rightMaxBox = currentMaxBox.clone();
+            
+            // Update bounding boxes based on child directions stored in branch
             for (int i = 0; i < dimension; i++) {
+                // If bit is set, left child has this bound; otherwise right child has it
                 if (b.childMinPointDirections.get(i)) {
                     leftMinBox[i] = b.childMinPointValues[i];
                 } else {
@@ -93,6 +125,8 @@ public class SmallTree implements Serializable {
                     rightMaxBox[i] = b.childMaxPointValues[i];
                 }
             }
+            
+            // Print branch info with Unicode box characters (9472 = ─, 9500 = ├, 9474 = │, 9492 = └)
             depthAndTreeString[1] += String.format("%c+ cut: (%d, %f), box: (%s, %s)\n", 9472, b.cut.dim, b.cut.value, Arrays.toString(currentMinBox), Arrays.toString(currentMaxBox));
             depthAndTreeString[1] += String.format("%s %c%c%c", depthAndTreeString[0], 9500, 9472, 9472);
             ppush.accept((char) 9474);
@@ -104,14 +138,23 @@ public class SmallTree implements Serializable {
             ppop.run();
         }
     }
-	
+
     /**
-     * Apply function to all leaves (nodes with no children)
+     * Applies a function to all leaf nodes in the tree.
+     * Useful for operations that need to be performed on all data points.
+     * 
+     * @param func Function to apply to each leaf
      */
     public void mapLeaves(Consumer<SmallLeaf> func) {
         mapLeaves(func, root);
     }
 
+    /**
+     * Recursively applies a function to all leaf nodes in a subtree.
+     * 
+     * @param func Function to apply to each leaf
+     * @param n Current node being processed
+     */
     private void mapLeaves(Consumer<SmallLeaf> func, SmallNode n) {
         if (n instanceof SmallLeaf) {
             func.accept((SmallLeaf) n);
@@ -126,21 +169,41 @@ public class SmallTree implements Serializable {
         }
     }
 
+    /**
+     * Returns a copy of the global minimum bounding box of the tree.
+     * 
+     * @return Array representing minimum bounds in each dimension
+     */
     public double[] getMinBox() {
         return rootMinPoint.clone();
     }
 
+    /**
+     * Returns a copy of the global maximum bounding box of the tree.
+     * 
+     * @return Array representing maximum bounds in each dimension
+     */
     public double[] getMaxBox() {
         return rootMaxPoint.clone();
     }
 
     /**
-     * Apply function to all branches (nodes with two children)
+     * Applies a function to all branch nodes in the tree.
+     * Useful for operations that need to be performed on internal tree structure.
+     * 
+     * @param func Function to apply to each branch
      */
     public void mapBranches(Consumer<SmallBranch> func) {
         mapBranches(func, root);
     }
 
+    /**
+     * Recursively applies a function to all branch nodes in a subtree.
+     * Note: Applies function in post-order (children first, then parent).
+     * 
+     * @param func Function to apply to each branch
+     * @param n Current node being processed
+     */
     private void mapBranches(Consumer<SmallBranch> func, SmallNode n) {
         if (n instanceof SmallBranch) {
             SmallBranch b = (SmallBranch) n;
@@ -155,7 +218,12 @@ public class SmallTree implements Serializable {
     }
 
     /**
-     * Delete a leaf (found from index) from the tree and return deleted node
+     * Removes a point from the tree and returns the deleted leaf node.
+     * Handles duplicate points by decrementing count, and restructures tree if necessary.
+     * 
+     * @param point The data point to remove from the tree
+     * @return The leaf node that was removed or had its count decremented
+     * @throws NoSuchElementException if the point is not found in the tree
      */
     public SmallLeaf forgetPoint(double[] point) throws NoSuchElementException {
         SmallLeaf leaf = findLeaf(point);
@@ -164,13 +232,13 @@ public class SmallTree implements Serializable {
             throw new NoSuchElementException(String.format("Point not found: %s", Arrays.toString(point)));
         }
 
-        // If duplicate points exist, decrease num for all nodes above
+        // If duplicate points exist, just decrease count for all nodes above
         if (leaf.num > 1) {
             updateLeafCountUpwards(leaf, -1);
             return leaf;
         }
 
-        // If leaf is root, clear the tree
+        // If leaf is the only node in tree, clear everything
         if (root.equals(leaf)) {
             root = null;
             rootMinPoint = null;
@@ -178,15 +246,16 @@ public class SmallTree implements Serializable {
             return leaf;
         }
 
-        // Calculate parent and sibling
+        // Calculate parent and sibling for tree restructuring
         SmallBranch parent = leaf.parent;
         SmallNode sibling = getSibling(leaf);
 
-        // If parent is root, set sibling to root and update depths
+        // If parent is root, promote sibling to root and update global bounds
         if (root.equals(parent)) {
             SmallBranch bRoot = (SmallBranch)root;
             for (int i = 0; i < dimension; i++) {
-                // If leaf made up bounding box at dimension, set to other side
+                // If leaf contributed to bounding box at dimension i, update to sibling's bounds
+                // XOR logic: if leaf is left child and direction bit is false, OR leaf is right child and direction bit is true
                 if ((leaf.equals(parent.left)) != bRoot.childMinPointDirections.get(i)) {
                     rootMinPoint[i] = bRoot.childMinPointValues[i];
                 }
@@ -197,38 +266,42 @@ public class SmallTree implements Serializable {
 
             sibling.parent = null;
             root = sibling;
-
             return leaf;
         }
 
-        // Shrink bounding box before updating pointers
+        // Shrink bounding boxes up the tree before restructuring
         shrinkBoxUpwards(leaf);
 
-        // Move sibling up a layer and link nodes
+        // Move sibling up one level, replacing parent
         SmallBranch grandparent = parent.parent;
         sibling.parent = grandparent;
-        // In case the returned node is used somehow
-        leaf.parent = null;
+        leaf.parent = null; // Clean up for potential reuse
+        
+        // Update grandparent's child pointer
         if (parent.equals(grandparent.left)) {
             grandparent.left = sibling;
         } else {
             grandparent.right = sibling;
         }
 
-        // Update leaf counts for each branch
+        // Update leaf counts for all ancestors
         updateLeafCountUpwards(grandparent, -1);
 
         return leaf;
     }
 
     /**
-     * Insert a point into the tree with a given index and create a new leaf
+     * Inserts a new point into the tree, creating a new leaf or incrementing count for duplicates.
+     * Uses random cuts to maintain the tree structure for anomaly detection.
+     * 
+     * @param point The data point to insert
+     * @return The leaf node that was created or had its count incremented
      */
     public SmallLeaf insertPoint(double[] point) {
-        // Check that dimensions are consistent and index doesn't exist
+        // Validate input dimensions
         assert point.length == dimension;
 
-        // If no points, set necessary variables
+        // Handle empty tree case
         if (root == null) {
             SmallLeaf leaf = new SmallLeaf();
             root = leaf;
@@ -237,23 +310,23 @@ public class SmallTree implements Serializable {
             return leaf;
         }
 
-        // Check for duplicates and only update counts if it exists
+        // Check for duplicates and only update counts if point already exists
         SmallLeaf duplicate = findLeaf(point);
         if (duplicate != null) {
             updateLeafCountUpwards(duplicate, 1);
             return duplicate;
         }
 
-        // No duplicates found, continue
+        // Initialize variables for tree traversal and insertion
         SmallNode node = root;
         SmallBranch parent = null;
         SmallLeaf leaf = null;
         SmallBranch branch = null;
         boolean useLeftSide = false;
-        double[] minPoint = rootMinPoint.clone();
+        double[] minPoint = rootMinPoint.clone(); // Current bounding box during traversal
         double[] maxPoint = rootMaxPoint.clone();
 
-        // Update main bounding box
+        // Update global bounding box to include new point
         for (int i = 0; i < dimension; i++) {
             if (point[i] < rootMinPoint[i]) {
                 rootMinPoint[i] = point[i];
@@ -263,40 +336,44 @@ public class SmallTree implements Serializable {
             }
         }
 
-        // Traverse tree until insertion spot found
+        // Traverse tree until we find where to insert the new point
         while (true) {
             Cut c = insertPointCut(point, minPoint, maxPoint);
-            // Has to be less than because less than or equal goes to the left
-            // Equal would make node go to the right, excluding some points from query
+            
+            // If cut is before current bounding box, insert new leaf on left
             if (c.value < minPoint[c.dim]) {
                 leaf = new SmallLeaf();
                 branch = new SmallBranch(c, dimension, leaf, node, leaf.num + node.num);
                 break;
-            // Shouldn't result in going down too far because dimensions with 0 variance have a 0 probability of being chosen?
+            // If cut is after current bounding box and point is after cut, insert on right
             } else if (c.value >= maxPoint[c.dim] && point[c.dim] > c.value) {
                 leaf = new SmallLeaf();
                 branch = new SmallBranch(c, dimension, node, leaf, leaf.num + node.num);
                 break;
             } else {
+                // Continue traversing down the tree
                 SmallBranch b = (SmallBranch) node;
                 parent = b;
                 BitSet minSet = (BitSet)b.childMinPointDirections.clone();
                 BitSet maxSet = (BitSet)b.childMaxPointDirections.clone();
+                
+                // Choose which child to follow based on cut value
                 if (point[b.cut.dim] <= b.cut.value) {
                     node = b.left;
                     useLeftSide = true;
                 } else {
                     node = b.right;
                     useLeftSide = false;
+                    // Flip bits for right side (since directions are stored relative to left)
                     minSet.flip(0, dimension);
                     maxSet.flip(0, dimension);
                 }
 
                 double[] oldMin = minPoint.clone();
                 double[] oldMax = maxPoint.clone();
-                // Update bounding boxes at each step down the tree
-                // The new node is guaranteed to be inserted under this path, so it's easier to do now
-                // Through b and not node since values are stored in the parent
+                
+                // Update bounding boxes as we traverse down
+                // The new node will be inserted under this path, so update bounds iteratively
                 for (int i = minSet.nextSetBit(0); i != -1; i = minSet.nextSetBit(i + 1)) {
                     minPoint[i] = b.childMinPointValues[i];
                 }
@@ -304,19 +381,21 @@ public class SmallTree implements Serializable {
                     maxPoint[i] = b.childMaxPointValues[i];
                 }
 
+                // Update branch's bounding box information to include new point
                 for (int i = 0; i < dimension; i++) {
-                    // If the path did not make up the min point
+                    // Update minimum bounds
                     if (useLeftSide == b.childMinPointDirections.get(i)) {
-                        // Update the value and direction if it's a new min
+                        // If path we took contributes to min and new point is smaller
                         if (point[i] < oldMin[i]) {
-                            b.childMinPointDirections.flip(i);
-                            b.childMinPointValues[i] = oldMin[i];
-                        // Otherwise update the value if necessary
+                            b.childMinPointDirections.flip(i); // Switch direction
+                            b.childMinPointValues[i] = oldMin[i]; // Store old min
                         } else {
+                            // Update to smaller value between current and new point
                             b.childMinPointValues[i] = Math.min(b.childMinPointValues[i], point[i]);
                         }
                     }
-                    // Same for max box
+                    
+                    // Update maximum bounds (same logic as min)
                     if (useLeftSide == b.childMaxPointDirections.get(i)) {
                         if (point[i] > oldMax[i]) {
                             b.childMaxPointDirections.flip(i);
@@ -329,25 +408,27 @@ public class SmallTree implements Serializable {
             }
         }
 
-        // Check if cut was found
+        // Ensure we found a valid insertion point
         assert branch != null;
 
-        // Sets values for newly created branch
+        // Configure newly created branch's bounding box information
         for (int i = 0; i < dimension; i++) {
-            // In this case, minPoint and maxPoint represent the bounding box of leaf's sibling
-            // They've been slowly cut down from traversing down the tree
-            // Set the point directions for branch by checking if leaf or the other node is a min/max
+            // minPoint and maxPoint now represent the bounding box of the leaf's sibling
+            // Set direction bits: true if leaf contributes to bound, false if sibling does
             branch.childMinPointDirections.set(i, (point[i] < minPoint[i]) != leaf.equals(branch.left));
             branch.childMaxPointDirections.set(i, (point[i] > maxPoint[i]) != leaf.equals(branch.left));
-            // Set the point values to the value which is NOT the min and NOT the max respectively
-            // aka the max and min, flipped
+            
+            // Store the bound values (max for min direction, min for max direction)
             branch.childMinPointValues[i] = Math.max(point[i], minPoint[i]);
             branch.childMaxPointValues[i] = Math.min(point[i], maxPoint[i]);
         }
 
+        // Link all nodes together
         node.parent = branch;
         leaf.parent = branch;
         branch.parent = parent;
+        
+        // Update parent's child pointer or set as new root
         if (parent != null) {
             if (useLeftSide) {
                 parent.left = branch;
@@ -357,60 +438,63 @@ public class SmallTree implements Serializable {
         } else {
             root = branch;
         }
-        // Increase leaf counts
+        
+        // Update leaf counts for all ancestors
         updateLeafCountUpwards(parent, 1);
 
         return leaf;
     }
 
     /**
-     * Shrinks the box up the tree, starting from a node
-     * Expected to be called on removal with the removed leaf
+     * Shrinks bounding boxes up the tree after a leaf removal.
+     * Updates parent bounding boxes when a leaf that contributed to the bounds is removed.
+     * This is a complex algorithm that tracks which dimensions need updating and propagates
+     * changes up the tree until the impact is fully absorbed.
+     * 
+     * @param leaf The leaf that was removed, used as starting point for bound updates
      */
     private void shrinkBoxUpwards(SmallLeaf leaf) {
-        // The bits of parent's bounding box which are determined by the child
-        // --> Whether or not the leaf forms the edge of the bounding box 
+        // Track which dimensions of the bounding box are determined by the removed leaf
         BitSet minDetermined = new BitSet();
         BitSet maxDetermined = new BitSet();
-        minDetermined.set(0, dimension);
+        minDetermined.set(0, dimension); // Initially all dimensions might be affected
         maxDetermined.set(0, dimension);
 
         SmallBranch node = leaf.parent;
         SmallNode previousNode = leaf;
+        // Alternative bounds from sibling subtrees
         double[] altMins = new double[dimension];
         Arrays.fill(altMins, Double.MAX_VALUE);
         double[] altMaxes = new double[dimension];
-        // Not Double.MIN_VALUE!
-        Arrays.fill(altMaxes, -Double.MAX_VALUE); 
+        Arrays.fill(altMaxes, -Double.MAX_VALUE); // Not Double.MIN_VALUE (which is smallest positive)!
+        
+        // Travel up the tree until all affected dimensions are resolved
 		while ((!minDetermined.isEmpty() || !maxDetermined.isEmpty()) && node != null) {
-            // For the bits that are determined
+            // Process dimensions where removed leaf contributed to minimum bound
             for (int i = minDetermined.nextSetBit(0); i != -1; i = minDetermined.nextSetBit(i + 1)) {
-                // Check if new node makes them undetermined
+                // Check if current node absorbs the impact (other child now provides bound)
                 if (previousNode.equals(node.left) != node.childMinPointDirections.get(i)) {
-                    // If not, then this dimension continues up
-                    // Check against the other child
-                    // If the other child sets a new min/max, update directions to current child
+                    // Impact continues upward, but check if sibling provides better bound
                     if (node.childMinPointValues[i] < altMins[i]) {
-                        // Update values to other child
+                        // Update direction to point to current path
                         if (previousNode.equals(node.left)) {
                             node.childMinPointDirections.set(i);
                         } else {
                             node.childMinPointDirections.clear(i);
                         }
+                        // Swap values: store sibling's bound, update alt with current
                         double temp = node.childMinPointValues[i];
                         node.childMinPointValues[i] = altMins[i];
-                        // Expand alt min/max box if necessary
                         altMins[i] = temp;
                     }
-                // If bit is lost further up
                 } else {
-                    // The removed point must make up the pointValues, so set it to the alt value
+                    // Impact absorbed at this level, use alternative bound
                     node.childMinPointValues[i] = altMins[i];
-                    // Forget the bit for later iterations
-                    minDetermined.clear(i);
+                    minDetermined.clear(i); // No longer needs to propagate up
                 }
             }
-            // Same for max
+            
+            // Same logic for maximum bounds
             for (int i = maxDetermined.nextSetBit(0); i != -1; i = maxDetermined.nextSetBit(i + 1)) {
                 if (previousNode.equals(node.left) != node.childMaxPointDirections.get(i)) {
                     if (node.childMaxPointValues[i] > altMaxes[i]) {
@@ -433,7 +517,7 @@ public class SmallTree implements Serializable {
             node = node.parent;
         }
 
-        // Root reached, update main boxes
+        // If we reached the root, update global bounding boxes
         if (node == null) {
             for (int i = minDetermined.nextSetBit(0); i != -1; i = minDetermined.nextSetBit(i + 1)) {
                 rootMinPoint[i] = altMins[i];
@@ -445,7 +529,11 @@ public class SmallTree implements Serializable {
     }
 
     /**
-     * Gets the sibling of a node (other child of its parent)
+     * Returns the sibling node of a given node.
+     * Every non-root node has exactly one sibling in a binary tree.
+     * 
+     * @param n The node whose sibling to find
+     * @return The sibling node
      */
     private SmallNode getSibling(SmallNode n) {
         SmallBranch parent = n.parent;
@@ -456,7 +544,12 @@ public class SmallTree implements Serializable {
     }
 
     /**
-     * Increases the leaf number for all ancestors above a given node by increment
+     * Updates the leaf count for all ancestor nodes by a given increment.
+     * This maintains the count of leaves in each subtree, which is important
+     * for anomaly scoring calculations.
+     * 
+     * @param node Starting node
+     * @param increment Amount to add to each ancestor's leaf count (can be negative)
      */
     private void updateLeafCountUpwards(SmallNode node, int increment) {
         while (node != null) {
@@ -466,26 +559,35 @@ public class SmallTree implements Serializable {
     }
 
     /**
-     * Finds the leaf corresponding to a point
+     * Finds the leaf node that contains a specific point.
+     * Traverses the tree following cuts until reaching a leaf, then verifies
+     * the leaf's bounding box matches the search point.
+     * 
+     * @param point The point to search for
+     * @return The leaf containing the point, or null if not found
      */
     private SmallLeaf findLeaf(double[] point) {
         SmallNode n = root;
         double[] minPoint = rootMinPoint.clone();
         double[] maxPoint = rootMaxPoint.clone();
-        // Traverse down tree, following cuts
+        
+        // Traverse down tree, following cuts and updating bounding box
         while (!(n instanceof SmallLeaf)) {
             SmallBranch b = (SmallBranch) n;
             BitSet min = (BitSet)b.childMinPointDirections.clone();
             BitSet max = (BitSet)b.childMaxPointDirections.clone();
+            
+            // Choose child based on cut dimension and value
             if (point[b.cut.dim] <= b.cut.value) {
                 n = b.left;
             } else {
                 n = b.right;
+                // Flip direction bits for right child
                 min.flip(0, dimension);
                 max.flip(0, dimension);
             }
 
-            // Keep track of bounding box on the way down
+            // Update bounding box based on path taken
             for (int i = min.nextSetBit(0); i != -1; i = min.nextSetBit(i + 1)) {
                 minPoint[i] = b.childMinPointValues[i];
             }
@@ -493,7 +595,8 @@ public class SmallTree implements Serializable {
                 maxPoint[i] = b.childMaxPointValues[i];
             }
         }
-        // Check that a leaf is reached and the points are the same
+        
+        // Verify that leaf's bounding box exactly matches the search point
         if (!Arrays.equals(point, minPoint) || !Arrays.equals(point, maxPoint)) {
             return null;
         }
@@ -501,29 +604,33 @@ public class SmallTree implements Serializable {
     }
 
     /**
-     * The maximum number of nodes displaced by removing any subset of the tree including a leaf 
-     * In practice, there are too many subsets to consider so it can be estimated by looking up the tree
-     * There is no definitive algorithm to empirically calculate codisp, so the ratio of sibling num to node num is used
+     * Calculates the collusive displacement for anomaly scoring.
+     * This estimates the maximum number of nodes displaced by removing any subset
+     * of the tree that includes the given leaf. Higher values indicate more anomalous points.
+     * 
+     * The algorithm traverses from leaf to root, calculating the displacement metric ("codisp")
+     * at each level. Note that there is no definitive algorithm to calculate this metric,
+     * we use (sibling subtree size / current subtree size) to be consistent with the original implementation.
+     * 
+     * @param leaf The leaf node to calculate displacement for
+     * @return Maximum displacement ratio found along the path to root
      */
     public int getCollusiveDisplacement(SmallLeaf leaf) {
         if (leaf.equals(root)) {
-            return 0;
+            return 0; // Root cannot be displaced
         }
 
         SmallNode node = leaf;
         int maxResult = -1;
+        
+        // Traverse from leaf to root, calculating displacement at each level
         while (node != null) {
             SmallBranch parent = node.parent;
             if (parent == null)
                 break;
-            SmallNode sibling;
-            if (node.equals(parent.left)) {
-                sibling = parent.right;
-            } else {
-                sibling = parent.left;
-            }
-            int deleted = node.num;
-            int displacement = sibling.num;
+                    
+            int deleted = node.num; // Number of leaves in current subtree
+            int displacement = getSibling(node).num; // Number of leaves in sibling subtree
             maxResult = Math.max(maxResult, displacement / deleted);
             node = parent;
         }
@@ -531,13 +638,21 @@ public class SmallTree implements Serializable {
     }
 
     /**
-     * Generates a random cut from the span of a point and bounding box
+     * Generates a random cut for inserting a point into the tree.
+     * The cut is chosen randomly with probability proportional to the span
+     * in each dimension of the combined bounding box of the point and current box.
+     * 
+     * @param point The point being inserted
+     * @param minPoint Current minimum bounding box
+     * @param maxPoint Current maximum bounding box
+     * @return A Cut object specifying dimension and value for the cut
      */
     private Cut insertPointCut(double[] point, double[] minPoint, double[] maxPoint) {
         double[] newMinBox = new double[minPoint.length];
         double[] span = new double[minPoint.length];
-        // Cumulative sum of span
-        double[] spanSum = new double[minPoint.length];
+        double[] spanSum = new double[minPoint.length]; // Cumulative sum for weighted selection
+        
+        // Calculate span in each dimension and cumulative sums
         for (int i = 0; i < dimension; i++) {
             newMinBox[i] = Math.min(minPoint[i], point[i]);
             double maxI = Math.max(maxPoint[i], point[i]);
@@ -548,30 +663,33 @@ public class SmallTree implements Serializable {
                 spanSum[i] = span[0];
             }
         }
-        // Weighted random with each dimension's span
+        
+        // Weighted random selection based on span sizes
         double range = spanSum[spanSum.length - 1];
         double r = random.nextDouble() * range;
         int cutDim = -1;
+        
+        // Find dimension corresponding to random selection
         for (int i = 0; i < dimension; i++) {
-            // Finds first value greater or equal to chosen
             if (spanSum[i] >= r) {
                 cutDim = i;
                 break;
             }
         }
         assert cutDim > -1;
+        
+        // Calculate cut value within the selected dimension
         double value = newMinBox[cutDim] + spanSum[cutDim] - r;
         return new Cut(cutDim, value);
     }
 
     /** 
-     * Helper class representing a cut point along some dimension
+     * Represents a cut in the tree - a dimension and value that splits the space.
+     * Necessary because Java doesn't have tuples.
      */
     public static class Cut implements Serializable {
-        // Dimension of cut
-        public int dim;
-        // Value of cut
-        public double value;
+        public int dim;    // Dimension of the cut (0 to dimension-1)
+        public double value; // Value where the cut is made in that dimension
 
         public Cut(int d, double v) {
             dim = d;
