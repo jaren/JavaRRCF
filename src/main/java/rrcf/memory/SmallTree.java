@@ -414,7 +414,7 @@ public class SmallTree implements Serializable {
         // Configure newly created branch's bounding box information
         for (int i = 0; i < dimension; i++) {
             // minPoint and maxPoint now represent the bounding box of the leaf's sibling
-            // Set direction bits: true if leaf contributes to bound, false if sibling does
+            // Set direction bits on new parent
             branch.childMinPointDirections.set(i, (point[i] < minPoint[i]) != leaf.equals(branch.left));
             branch.childMaxPointDirections.set(i, (point[i] > maxPoint[i]) != leaf.equals(branch.left));
             
@@ -469,7 +469,7 @@ public class SmallTree implements Serializable {
         Arrays.fill(altMaxes, -Double.MAX_VALUE); // Not Double.MIN_VALUE (which is smallest positive)!
         
         // Travel up the tree until all affected dimensions are resolved
-		while ((!minDetermined.isEmpty() || !maxDetermined.isEmpty()) && node != null) {
+	while ((!minDetermined.isEmpty() || !maxDetermined.isEmpty()) && node != null) {
             // Process dimensions where removed leaf contributed to minimum bound
             for (int i = minDetermined.nextSetBit(0); i != -1; i = minDetermined.nextSetBit(i + 1)) {
                 // Check if current node absorbs the impact (other child now provides bound)
@@ -530,7 +530,7 @@ public class SmallTree implements Serializable {
 
     /**
      * Returns the sibling node of a given node.
-     * Every non-root node has exactly one sibling in a binary tree.
+     * Every node has exactly one sibling in SmallTree (except the root).
      * 
      * @param n The node whose sibling to find
      * @return The sibling node
